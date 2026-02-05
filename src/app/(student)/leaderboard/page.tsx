@@ -1,4 +1,3 @@
-import { Trophy } from '@phosphor-icons/react/dist/ssr';
 import { getLeaderboard, getCurrentUserRank } from '@/lib/api/student';
 import { LeaderboardPodium, LeaderboardRow, YourRankCard } from '@/components/student/LeaderboardComponents';
 import { PageHeader } from '@/components/student/PageHeader';
@@ -18,11 +17,11 @@ export default async function LeaderboardPage() {
       <PageHeader
         title="Leaderboard"
         subtitle="See how you rank against other students"
-        icon={Trophy}
+        iconName="trophy"
       />
 
       {/* Podium - Top 3 */}
-      <div className="bg-bg-secondary rounded-2xl border border-border-secondary p-6">
+      <div className="bg-bg-secondary rounded-2xl border border-border-secondary shadow-sm p-6">
         <LeaderboardPodium entries={top3} />
       </div>
 

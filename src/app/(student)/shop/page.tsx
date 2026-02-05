@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Storefront } from '@phosphor-icons/react';
 import { getShopItems, getStudent } from '@/lib/api/student';
 import { type ShopItem, type ShopCategory, type ShopFilters } from '@/types/student';
 import { ShopItemCard } from '@/components/student/ShopItemCard';
@@ -56,11 +55,11 @@ export default function ShopPage() {
       <PageHeader
         title="University Shop"
         subtitle="Redeem your coins for exclusive items and privileges"
-        icon={Storefront}
+        iconName="storefront"
       />
 
       {/* Coin Balance Bar */}
-      <div className="bg-bg-secondary rounded-xl border border-border-secondary overflow-hidden">
+      <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm overflow-hidden">
         <CoinBalanceBar amount={userCoins} />
       </div>
 

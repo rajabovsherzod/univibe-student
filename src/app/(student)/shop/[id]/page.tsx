@@ -126,7 +126,7 @@ export default function ShopItemPage() {
           </div>
 
           {/* Price */}
-          <div className="bg-bg-secondary rounded-xl border border-border-secondary p-6">
+          <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <span className="text-fg-tertiary">Price</span>
               <div className="flex items-center gap-2">

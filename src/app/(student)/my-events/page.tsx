@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CalendarCheck, Coin } from '@phosphor-icons/react';
+import { Coin } from '@phosphor-icons/react';
 import { getMyEvents } from '@/lib/api/student';
 import { type Event } from '@/types/student';
 import { EventCard } from '@/components/student/EventCard';
@@ -43,7 +43,7 @@ export default function MyEventsPage() {
       <PageHeader
         title="My Events"
         subtitle="Track your event registrations and attendance"
-        icon={CalendarCheck}
+        iconName="calendar-check"
       />
 
       {/* Tabs */}

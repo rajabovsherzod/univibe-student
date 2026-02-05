@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { CoinPill } from '@/components/student/CoinPill';
 import { RankChip } from '@/components/student/RankChip';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/student/PageHeader';
 import {
   Mail,
   GraduationCap,
@@ -59,7 +60,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-fg-primary">Profile</h1>
+        <PageHeader title="Profile" subtitle="View and manage your account" iconName="user" />
         <ProfileSkeleton />
       </div>
     );
@@ -72,7 +73,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <h1 className="text-2xl font-bold text-fg-primary">Profile</h1>
+      <PageHeader title="Profile" subtitle="View and manage your account" iconName="user" />
 
       {/* Student Card */}
       <div className="bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl p-6 text-white">
@@ -106,7 +107,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Stats */}
-      <div className="bg-bg-secondary rounded-xl border border-border-secondary p-4">
+      <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-4">
         <h3 className="font-semibold text-fg-primary mb-4">Quick Stats</h3>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
@@ -132,7 +133,7 @@ export default function ProfilePage() {
 
       {/* Achievements / Badges */}
       {student.badges.length > 0 && (
-        <div className="bg-bg-secondary rounded-xl border border-border-secondary p-4">
+        <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-4">
           <h3 className="font-semibold text-fg-primary mb-4 flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" />
             Achievements
@@ -159,7 +160,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Settings */}
-      <div className="bg-bg-secondary rounded-xl border border-border-secondary overflow-hidden">
+      <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm overflow-hidden">
         <h3 className="font-semibold text-fg-primary p-4 border-b border-border-secondary">
           Settings
         </h3>
@@ -204,7 +205,7 @@ function InfoCard({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-3 p-4 bg-bg-secondary rounded-xl border border-border-secondary">
+    <div className="flex items-center gap-3 p-4 bg-bg-secondary rounded-xl border border-border-secondary shadow-sm">
       <div className="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-950 flex items-center justify-center">
         <Icon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
       </div>
@@ -229,7 +230,7 @@ function QuickLink({
     <a
       href={href}
       className="
-        flex items-center justify-between p-4 bg-bg-secondary rounded-xl border border-border-secondary
+        flex items-center justify-between p-4 bg-bg-secondary rounded-xl border border-border-secondary shadow-sm
         hover:border-border-brand transition-colors
         focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
       "

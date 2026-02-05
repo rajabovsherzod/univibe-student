@@ -156,7 +156,7 @@ export function LeaderboardRow({ entry, isCurrentUser = false }: LeaderboardRowP
   return (
     <div
       className={`
-        flex items-center gap-4 p-4 rounded-xl border transition-colors
+        flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-colors
         ${isCurrentUser
           ? 'bg-brand-50 dark:bg-brand-950/50 border-brand-200 dark:border-brand-800'
           : 'bg-bg-secondary border-border-secondary hover:border-border-brand'
@@ -231,7 +231,7 @@ interface YourRankCardProps {
 
 export function YourRankCard({ entry }: YourRankCardProps) {
   return (
-    <div className="sticky bottom-0 left-0 right-0 p-4 bg-bg-primary/80 backdrop-blur-sm border-t border-border-secondary">
+    <div className="sticky bottom-0 left-0 right-0 p-4 bg-bg-primary/80 backdrop-blur-sm border-t border-border-secondary shadow-lg">
       <LeaderboardRow entry={entry} isCurrentUser />
     </div>
   );

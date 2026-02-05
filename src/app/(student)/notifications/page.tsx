@@ -102,7 +102,7 @@ export default function NotificationsPage() {
       <PageHeader
         title="Notifications"
         subtitle={unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
-        icon={Bell}
+        iconName="bell"
       >
         {unreadCount > 0 && (
           <Button

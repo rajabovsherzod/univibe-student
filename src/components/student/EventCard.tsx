@@ -32,7 +32,7 @@ export function EventCard({ event, variant = 'default' }: EventCardProps) {
       <Link
         href={`/events/${event.id}`}
         className="
-          group flex gap-4 p-4 bg-bg-secondary rounded-2xl
+          group flex gap-4 p-4 bg-bg-secondary rounded-2xl shadow-sm
           border border-border-secondary
           hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-lg hover:shadow-brand-500/10
           transition-all duration-300
@@ -77,7 +77,7 @@ export function EventCard({ event, variant = 'default' }: EventCardProps) {
     <Link
       href={`/events/${event.id}`}
       className="
-        group block bg-bg-secondary rounded-2xl overflow-hidden
+        group block bg-bg-secondary rounded-2xl overflow-hidden shadow-sm
         border border-border-secondary
         hover:border-brand-300 dark:hover:border-brand-600 
         hover:shadow-xl hover:shadow-brand-500/10
@@ -188,7 +188,7 @@ export function EventCarouselCard({ event }: { event: Event }) {
     <Link
       href={`/events/${event.id}`}
       className="
-        group flex-shrink-0 w-72 bg-bg-secondary rounded-2xl overflow-hidden
+        group flex-shrink-0 w-72 bg-bg-secondary rounded-2xl overflow-hidden shadow-sm
         border border-border-secondary
         hover:border-brand-300 dark:hover:border-brand-600 
         hover:shadow-xl hover:shadow-brand-500/10

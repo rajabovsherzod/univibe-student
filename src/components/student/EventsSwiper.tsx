@@ -71,7 +71,7 @@ export function EventsSwiper({ events }: EventsSwiperProps) {
             <Link
               href={`/events/${event.id}`}
               className="
-                group block bg-bg-secondary rounded-2xl overflow-hidden
+                group block bg-bg-secondary rounded-2xl overflow-hidden shadow-sm
                 border border-border-secondary
                 hover:border-brand-300 dark:hover:border-brand-600 
                 hover:shadow-xl hover:shadow-brand-500/10

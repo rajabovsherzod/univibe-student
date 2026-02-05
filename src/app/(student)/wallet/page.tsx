@@ -89,7 +89,7 @@ export default function WalletPage() {
       <PageHeader
         title="Wallet"
         subtitle="Track your coin earnings and spending"
-        icon={Wallet}
+        iconName="wallet"
       />
 
       {/* Balance Card */}
@@ -169,7 +169,7 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
   };
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-bg-secondary rounded-xl border border-border-secondary">
+    <div className="flex items-center gap-4 p-4 bg-bg-secondary rounded-xl border border-border-secondary shadow-sm">
       <div
         className={`
           w-10 h-10 rounded-full flex items-center justify-center

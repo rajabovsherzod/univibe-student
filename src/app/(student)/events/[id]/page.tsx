@@ -177,7 +177,7 @@ export default function EventDetailsPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <div className="bg-bg-secondary rounded-xl border border-border-secondary p-6">
+          <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6">
             <h2 className="text-lg font-semibold text-fg-primary mb-4">About This Event</h2>
             <p className="text-fg-secondary leading-relaxed">{event.description}</p>
 
@@ -231,7 +231,7 @@ export default function EventDetailsPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Event Details Card */}
-          <div className="bg-bg-secondary rounded-xl border border-border-secondary p-6 space-y-4">
+          <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6 space-y-4">
             <div className="flex items-start gap-3">
               <Calendar className="w-5 h-5 text-brand-500 mt-0.5 flex-shrink-0" />
               <div>
@@ -283,7 +283,7 @@ export default function EventDetailsPage() {
           </div>
 
           {/* CTA Card */}
-          <div className="bg-bg-secondary rounded-xl border border-border-secondary p-6">
+          <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6">
             {isRegistered ? (
               <>
                 <div className="flex items-center gap-2 text-success-600 dark:text-success-400 mb-4">

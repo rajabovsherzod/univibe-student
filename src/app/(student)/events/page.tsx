@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CalendarBlank } from '@phosphor-icons/react';
 import { getEvents } from '@/lib/api/student';
 import { type Event, type EventCategory, type EventStatus, type EventFilters } from '@/types/student';
 import { EventCard } from '@/components/student/EventCard';
@@ -76,7 +75,7 @@ export default function EventsPage() {
       <PageHeader
         title="Events"
         subtitle="Discover and register for upcoming university events"
-        icon={CalendarBlank}
+        iconName="calendar"
       />
 
       {/* Status Quick Filters */}

@@ -17,7 +17,7 @@ export function ShopItemCard({ item, userCoins }: ShopItemCardProps) {
     <Link
       href={`/shop/${item.id}`}
       className={`
-        group block bg-bg-secondary rounded-xl overflow-hidden
+        group block bg-bg-secondary rounded-xl overflow-hidden shadow-sm
         border border-border-secondary
         hover:border-border-brand hover:shadow-lg
         transition-all duration-200
@@ -74,7 +74,7 @@ export function ShopItemCompact({ item, userCoins }: ShopItemCardProps) {
     <Link
       href={`/shop/${item.id}`}
       className="
-        group flex gap-4 p-4 bg-bg-secondary rounded-xl
+        group flex gap-4 p-4 bg-bg-secondary rounded-xl shadow-sm
         border border-border-secondary
         hover:border-border-brand hover:shadow-md
         transition-all duration-200

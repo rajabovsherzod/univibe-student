@@ -35,7 +35,7 @@ export function AnnouncementCard({ announcement, variant = 'default' }: Announce
     return (
       <div
         className={`
-          p-4 bg-bg-secondary rounded-xl border
+          p-4 bg-bg-secondary rounded-xl border shadow-sm
           ${announcement.isPinned ? 'border-brand-300 dark:border-brand-700 bg-brand-25 dark:bg-brand-950/30' : 'border-border-secondary'}
         `}
       >
@@ -63,7 +63,7 @@ export function AnnouncementCard({ announcement, variant = 'default' }: Announce
   return (
     <div
       className={`
-        p-5 bg-bg-secondary rounded-xl border transition-all duration-200
+        p-5 bg-bg-secondary rounded-xl border shadow-sm transition-all duration-200
         hover:shadow-md
         ${announcement.isPinned
           ? 'border-brand-300 dark:border-brand-700 bg-brand-25 dark:bg-brand-950/30'
