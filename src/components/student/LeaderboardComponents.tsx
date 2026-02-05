@@ -1,7 +1,9 @@
+'use client';
+
 import { type LeaderboardEntry } from '@/types/student';
 import { RankPosition, RankChip } from './RankChip';
 import { CoinPill } from './CoinPill';
-import { TrendingUp, TrendingDown, Minus, Trophy } from 'lucide-react';
+import { TrendUp, TrendDown, Minus, Trophy } from '@phosphor-icons/react';
 
 interface LeaderboardPodiumProps {
   entries: LeaderboardEntry[];
@@ -12,22 +14,64 @@ export function LeaderboardPodium({ entries }: LeaderboardPodiumProps) {
   const [first, second, third] = entries.slice(0, 3);
   const podiumOrder = [second, first, third].filter(Boolean);
 
+  // Map position to CoinPill variant
+  const getCoinVariant = (position: number): 'gold' | 'silver' | 'bronze' => {
+    if (position === 1) return 'gold';
+    if (position === 2) return 'silver';
+    return 'bronze';
+  };
+
+  // Podium styling per position
+  const getPodiumStyles = (position: number) => {
+    const styles = {
+      1: {
+        height: 'h-36 sm:h-44 lg:h-52',
+        gradient: 'from-amber-400 via-yellow-400 to-amber-500',
+        shelfGradient: 'from-amber-300 to-amber-400',
+        borderColor: 'border-amber-500/50',
+        shadowColor: 'shadow-amber-400/30',
+        trophyColor: 'text-amber-100',
+        shineColor: 'from-white/30',
+      },
+      2: {
+        height: 'h-28 sm:h-36 lg:h-44',
+        gradient: 'from-gray-300 via-gray-200 to-gray-400',
+        shelfGradient: 'from-gray-200 to-gray-300',
+        borderColor: 'border-gray-400/50',
+        shadowColor: 'shadow-gray-400/20',
+        trophyColor: 'text-gray-600',
+        shineColor: 'from-white/40',
+      },
+      3: {
+        height: 'h-24 sm:h-32 lg:h-40',
+        gradient: 'from-orange-400 via-amber-400 to-orange-500',
+        shelfGradient: 'from-orange-300 to-orange-400',
+        borderColor: 'border-orange-500/50',
+        shadowColor: 'shadow-orange-400/30',
+        trophyColor: 'text-orange-100',
+        shineColor: 'from-white/30',
+      },
+    };
+    return styles[position as 1 | 2 | 3];
+  };
+
   return (
-    <div className="flex items-end justify-center gap-4 py-6">
+    <div className="flex items-end justify-center gap-2 sm:gap-4 lg:gap-6 py-8 px-2 sm:px-4 lg:px-8 w-full max-w-4xl mx-auto">
       {podiumOrder.map((entry, index) => {
         const position = index === 0 ? 2 : index === 1 ? 1 : 3;
-        const height = position === 1 ? 'h-32' : position === 2 ? 'h-24' : 'h-20';
+        const coinVariant = getCoinVariant(position);
+        const podiumStyle = getPodiumStyles(position);
 
         return (
           <div
             key={entry.student.id}
-            className="flex flex-col items-center"
+            className="flex flex-col items-center flex-1"
           >
             {/* Avatar & Info */}
-            <div className="relative mb-2">
+            <div className="relative mb-3">
               <div
                 className={`
-                  w-16 h-16 rounded-full border-4 overflow-hidden
+                  w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full border-4 overflow-hidden
                   ${position === 1 ? 'border-amber-400 shadow-lg shadow-amber-200/50 dark:shadow-amber-900/30' : ''}
                   ${position === 2 ? 'border-gray-400 shadow-md' : ''}
                   ${position === 3 ? 'border-orange-500 shadow-md' : ''}
@@ -40,32 +84,55 @@ export function LeaderboardPodium({ entries }: LeaderboardPodiumProps) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xl font-bold text-brand-600 dark:text-brand-400">
+                  <div className="w-full h-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xl sm:text-2xl lg:text-3xl font-bold text-brand-600 dark:text-brand-400">
                     {entry.student.name.charAt(0)}
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
                 <RankPosition rank={position as 1 | 2 | 3} size="sm" />
               </div>
             </div>
 
-            <p className="text-sm font-semibold text-fg-primary text-center max-w-20 truncate mt-2">
+            <p className="text-sm sm:text-base font-semibold text-fg-primary text-center max-w-full truncate mt-1 px-1">
               {entry.student.name}
             </p>
-            <p className="text-xs text-fg-tertiary mb-2">{entry.student.faculty}</p>
-            <CoinPill amount={entry.coins} size="sm" />
+            <p className="text-xs sm:text-sm text-fg-tertiary mb-2">{entry.student.faculty}</p>
+            <CoinPill amount={entry.coins} size="sm" variant={coinVariant} />
 
-            {/* Podium Stand */}
-            <div
-              className={`
-                mt-3 w-20 ${height} rounded-t-lg flex items-center justify-center
-                ${position === 1 ? 'bg-gradient-to-b from-amber-400 to-amber-500' : ''}
-                ${position === 2 ? 'bg-gradient-to-b from-gray-300 to-gray-400' : ''}
-                ${position === 3 ? 'bg-gradient-to-b from-orange-400 to-orange-500' : ''}
-              `}
-            >
-              <Trophy className={`w-6 h-6 ${position === 1 ? 'text-amber-100' : position === 2 ? 'text-gray-100' : 'text-orange-100'}`} />
+            {/* Premium Podium Stand */}
+            <div className="mt-4 w-full relative">
+              {/* Main podium body */}
+              <div
+                className={`
+                  w-full ${podiumStyle.height} rounded-t-2xl relative overflow-hidden
+                  bg-gradient-to-b ${podiumStyle.gradient}
+                  border-t-2 border-l-2 border-r-2 ${podiumStyle.borderColor}
+                  shadow-lg ${podiumStyle.shadowColor}
+                `}
+              >
+                {/* Shine effect */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${podiumStyle.shineColor} via-transparent to-transparent`} />
+
+                {/* Trophy shelf/pedestal */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                  {/* Small shelf base */}
+                  <div className={`w-12 sm:w-14 lg:w-16 h-8 sm:h-10 lg:h-12 rounded-lg bg-gradient-to-b ${podiumStyle.shelfGradient} shadow-md flex items-center justify-center border ${podiumStyle.borderColor}`}>
+                    <span className={podiumStyle.trophyColor}>
+                      <Trophy size={24} weight="fill" />
+                    </span>
+                  </div>
+                  {/* Shelf support */}
+                  <div className={`w-8 sm:w-10 lg:w-12 h-2 bg-gradient-to-b ${podiumStyle.shelfGradient} rounded-b-sm shadow-sm`} />
+                </div>
+
+                {/* Position number at bottom */}
+                <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2">
+                  <span className={`text-2xl sm:text-3xl lg:text-4xl font-black ${podiumStyle.trophyColor} drop-shadow-sm`}>
+                    {position}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -114,9 +181,9 @@ export function LeaderboardRow({ entry, isCurrentUser = false }: LeaderboardRowP
               ${isStable ? 'text-fg-tertiary' : ''}
             `}
           >
-            {isUp && <TrendingUp className="w-4 h-4" />}
-            {isDown && <TrendingDown className="w-4 h-4" />}
-            {isStable && <Minus className="w-4 h-4" />}
+            {isUp && <TrendUp size={16} weight="bold" />}
+            {isDown && <TrendDown size={16} weight="bold" />}
+            {isStable && <Minus size={16} />}
             {movement !== 0 && Math.abs(movement)}
           </span>
         )}
@@ -146,9 +213,9 @@ export function LeaderboardRow({ entry, isCurrentUser = false }: LeaderboardRowP
         <p className="text-sm text-fg-tertiary">{entry.student.faculty}</p>
       </div>
 
-      {/* Stats */}
+      {/* Stats - use primary (blue) variant for rows below podium */}
       <div className="text-right flex-shrink-0">
-        <CoinPill amount={entry.coins} size="sm" />
+        <CoinPill amount={entry.coins} size="sm" variant="primary" />
         <p className="text-xs text-fg-tertiary mt-1">
           {entry.eventsAttended} events
         </p>

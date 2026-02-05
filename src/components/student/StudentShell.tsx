@@ -4,18 +4,17 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home,
-  Calendar,
+  House,
+  CalendarBlank,
   Trophy,
-  ShoppingBag,
+  Storefront,
   User,
   Bell,
   Moon,
   Sun,
-  Menu,
-  X,
   Wallet,
-} from 'lucide-react';
+  CalendarCheck,
+} from '@phosphor-icons/react';
 import { CoinPill } from './CoinPill';
 import { RankChip } from './RankChip';
 
@@ -31,11 +30,37 @@ interface StudentShellProps {
   unreadNotifications?: number;
 }
 
-const navItems = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/events', label: 'Events', icon: Calendar },
+// Navigation items with Phosphor icons
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; weight?: 'regular' | 'fill' | 'bold' }>;
+}
+
+interface NavDivider {
+  divider: true;
+}
+
+type NavConfigItem = NavItem | NavDivider;
+
+const mainNavItems: NavConfigItem[] = [
+  { href: '/', label: 'Home', icon: House },
+  { href: '/events', label: 'Events', icon: CalendarBlank },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/shop', label: 'Shop', icon: ShoppingBag },
+  { href: '/shop', label: 'Shop', icon: Storefront },
+  { divider: true },
+  { href: '/my-events', label: 'My Events', icon: CalendarCheck },
+  { href: '/wallet', label: 'Wallet', icon: Wallet },
+  { divider: true },
+  { href: '/profile', label: 'Profile', icon: User },
+];
+
+// Mobile bottom dock items
+const mobileNavItems: NavItem[] = [
+  { href: '/', label: 'Home', icon: House },
+  { href: '/events', label: 'Events', icon: CalendarBlank },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/shop', label: 'Shop', icon: Storefront },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
@@ -46,10 +71,8 @@ export function StudentShell({
 }: StudentShellProps) {
   const pathname = usePathname();
   const [isDark, setIsDark] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Check initial theme
     const isDarkMode = document.documentElement.classList.contains('dark');
     setIsDark(isDarkMode);
   }, []);
@@ -68,144 +91,116 @@ export function StudentShell({
 
   return (
     <div className="min-h-screen bg-bg-primary">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-border-secondary bg-bg-secondary px-6 py-6">
+      {/* Desktop Sidebar - Untitled UI Style */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-[280px] lg:flex-col">
+        <div className="flex grow flex-col gap-y-6 overflow-y-auto border-r border-border-secondary bg-bg-secondary px-4 py-6">
           {/* Logo */}
-          <div className="flex h-12 shrink-0 items-center">
+          <div className="flex h-10 shrink-0 items-center px-2">
             <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">U</span>
+              <div className="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-base">U</span>
               </div>
-              <span className="text-xl font-bold text-fg-primary">
+              <span className="text-lg font-semibold text-fg-primary">
                 Univibe<span className="text-brand-600">Student</span>
               </span>
             </Link>
           </div>
 
-          {/* User Info */}
+          {/* User Info Card */}
           {student && (
-            <div className="p-4 rounded-xl bg-bg-tertiary">
+            <div className="mx-2 p-4 rounded-xl bg-bg-tertiary border border-border-secondary">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 flex-shrink-0">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 flex-shrink-0 ring-2 ring-bg-secondary shadow-sm">
                   {student.avatar ? (
                     <img src={student.avatar} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold">
+                    <div className="w-full h-full flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-sm">
                       {student.name.charAt(0)}
                     </div>
                   )}
                 </div>
-                <div className="min-w-0">
-                  <p className="font-medium text-fg-primary truncate text-sm">{student.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-fg-primary truncate text-sm">{student.name}</p>
+                  <p className="text-xs text-fg-tertiary truncate">Student</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <CoinPill amount={student.coins} size="sm" />
+                <CoinPill amount={student.coins} size="sm" variant="gold" />
                 <RankChip rank={student.rank} previousRank={student.previousRank} size="sm" />
               </div>
             </div>
           )}
 
           {/* Navigation */}
-          <nav className="flex flex-1 flex-col">
-            <ul className="flex flex-1 flex-col gap-y-1">
-              {navItems.map((item) => {
+          <nav className="flex flex-1 flex-col px-2">
+            <ul className="flex flex-col gap-y-1">
+              {mainNavItems.map((item, index) => {
+                if ('divider' in item) {
+                  return (
+                    <li key={`divider-${index}`} className="my-2">
+                      <div className="h-px bg-border-secondary" />
+                    </li>
+                  );
+                }
+
                 const Icon = item.icon;
                 const active = isActive(item.href);
+
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
                       className={`
-                        group flex gap-x-3 rounded-lg p-3 text-sm font-medium
-                        transition-colors duration-150
-                        focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
+                        group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
+                        transition-all duration-150 ease-out
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary
                         ${active
-                          ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400'
+                          ? 'bg-brand-600 text-white shadow-sm'
                           : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary'
                         }
                       `}
                     >
-                      <Icon
-                        className={`h-5 w-5 shrink-0 ${active ? 'text-brand-600 dark:text-brand-400' : 'text-fg-tertiary group-hover:text-fg-secondary'
-                          }`}
-                      />
-                      {item.label}
-                      {active && (
-                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-600 dark:bg-brand-400" />
-                      )}
+                      <span className={`shrink-0 transition-colors ${active ? 'text-white' : 'text-fg-tertiary group-hover:text-fg-secondary'}`}>
+                        <Icon size={20} weight={active ? 'fill' : 'regular'} />
+                      </span>
+                      <span className="flex-1">{item.label}</span>
                     </Link>
                   </li>
                 );
               })}
-
-              {/* Extra Links */}
-              <li className="mt-2 pt-2 border-t border-border-secondary">
-                <Link
-                  href="/wallet"
-                  className={`
-                    group flex gap-x-3 rounded-lg p-3 text-sm font-medium
-                    transition-colors duration-150
-                    focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
-                    ${pathname === '/wallet'
-                      ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400'
-                      : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary'
-                    }
-                  `}
-                >
-                  <Wallet className="h-5 w-5 shrink-0 text-fg-tertiary group-hover:text-fg-secondary" />
-                  Wallet
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/my-events"
-                  className={`
-                    group flex gap-x-3 rounded-lg p-3 text-sm font-medium
-                    transition-colors duration-150
-                    focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
-                    ${pathname === '/my-events'
-                      ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400'
-                      : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary'
-                    }
-                  `}
-                >
-                  <Calendar className="h-5 w-5 shrink-0 text-fg-tertiary group-hover:text-fg-secondary" />
-                  My Events
-                </Link>
-              </li>
             </ul>
           </nav>
 
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="
-              flex items-center gap-3 p-3 rounded-lg text-sm font-medium
-              text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary
-              transition-colors duration-150
-              focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
-            "
-          >
-            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            {isDark ? 'Light Mode' : 'Dark Mode'}
-          </button>
+          {/* Bottom Section */}
+          <div className="px-2 space-y-2">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="
+                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary
+                transition-all duration-150
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary
+              "
+            >
+              {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              <span className="flex-1 text-left">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border-secondary bg-bg-secondary px-4 shadow-sm">
+      <header className="lg:hidden sticky top-0 z-40 flex h-14 shrink-0 items-center gap-x-3 border-b border-border-secondary bg-bg-secondary/95 backdrop-blur-sm px-4">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-            <span className="text-white font-bold">U</span>
+            <span className="text-white font-bold text-sm">U</span>
           </div>
-          <span className="font-bold text-fg-primary">Univibe</span>
+          <span className="font-semibold text-fg-primary">Univibe</span>
         </Link>
 
         <div className="flex-1" />
 
-        {/* Coins & Notifications */}
         {student && <CoinPill amount={student.coins} size="sm" />}
 
         <Link
@@ -214,12 +209,12 @@ export function StudentShell({
             relative p-2 rounded-lg text-fg-secondary
             hover:bg-bg-tertiary hover:text-fg-primary
             transition-colors
-            focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
           "
         >
-          <Bell className="w-5 h-5" />
+          <Bell size={20} />
           {unreadNotifications > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-error-500 text-white text-xs flex items-center justify-center font-medium">
+            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 rounded-full bg-error-500 text-white text-[10px] font-bold flex items-center justify-center">
               {unreadNotifications > 9 ? '9+' : unreadNotifications}
             </span>
           )}
@@ -231,30 +226,27 @@ export function StudentShell({
             p-2 rounded-lg text-fg-secondary
             hover:bg-bg-tertiary hover:text-fg-primary
             transition-colors
-            focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
           "
         >
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {isDark ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </header>
 
       {/* Desktop Header with Notifications */}
-      <header className="hidden lg:flex lg:fixed lg:top-0 lg:left-64 lg:right-0 lg:z-40 h-16 items-center gap-x-4 border-b border-border-secondary bg-bg-secondary px-6">
-        <div className="flex-1" />
-
-        {/* Notification Bell */}
+      <header className="hidden lg:flex lg:fixed lg:top-0 lg:left-[280px] lg:right-0 lg:z-40 h-14 items-center justify-end gap-x-4 border-b border-border-secondary bg-bg-secondary/95 backdrop-blur-sm px-6">
         <Link
           href="/notifications"
           className="
             relative p-2 rounded-lg text-fg-secondary
             hover:bg-bg-tertiary hover:text-fg-primary
             transition-colors
-            focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
           "
         >
-          <Bell className="w-5 h-5" />
+          <Bell size={20} />
           {unreadNotifications > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-error-500 text-white text-xs flex items-center justify-center font-medium">
+            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 rounded-full bg-error-500 text-white text-[10px] font-bold flex items-center justify-center">
               {unreadNotifications > 9 ? '9+' : unreadNotifications}
             </span>
           )}
@@ -262,16 +254,16 @@ export function StudentShell({
       </header>
 
       {/* Main Content */}
-      <main className="lg:pl-64 lg:pt-16 pb-20 lg:pb-0">
+      <main className="lg:pl-[280px] lg:pt-14 pb-20 lg:pb-0">
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </div>
       </main>
 
       {/* Mobile Bottom Dock Navigation */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border-secondary bg-bg-secondary/95 backdrop-blur-sm">
-        <div className="flex justify-around items-center h-16 px-2">
-          {navItems.map((item) => {
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border-secondary bg-bg-secondary/95 backdrop-blur-sm safe-area-pb">
+        <div className="flex justify-around items-center h-16 px-1">
+          {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
@@ -279,19 +271,21 @@ export function StudentShell({
                 key={item.href}
                 href={item.href}
                 className={`
-                  flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg
-                  transition-colors duration-150 min-w-14
-                  focus-visible:ring-2 focus-visible:ring-brand-500
+                  relative flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl
+                  transition-all duration-150 min-w-[56px]
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
                   ${active
                     ? 'text-brand-600 dark:text-brand-400'
                     : 'text-fg-tertiary hover:text-fg-secondary'
                   }
                 `}
               >
-                <Icon className={`w-5 h-5 ${active ? 'scale-110' : ''} transition-transform`} />
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className={`transition-transform ${active ? 'scale-110' : ''}`}>
+                  <Icon size={22} weight={active ? 'fill' : 'regular'} />
+                </span>
+                <span className="text-[10px] font-medium">{item.label}</span>
                 {active && (
-                  <div className="absolute bottom-1 w-1 h-1 rounded-full bg-brand-600 dark:bg-brand-400" />
+                  <div className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-brand-600 dark:bg-brand-400" />
                 )}
               </Link>
             );

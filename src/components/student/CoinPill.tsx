@@ -1,46 +1,102 @@
-import { Coins } from 'lucide-react';
+'use client';
+
+import { Coin } from '@phosphor-icons/react';
 
 interface CoinPillProps {
   amount: number;
   size?: 'sm' | 'md' | 'lg';
   showIcon?: boolean;
+  variant?: 'gold' | 'silver' | 'bronze' | 'primary';
   className?: string;
 }
 
 const sizeStyles = {
-  sm: 'text-xs px-2 py-0.5 gap-1',
-  md: 'text-sm px-3 py-1 gap-1.5',
-  lg: 'text-base px-4 py-1.5 gap-2',
+  sm: 'text-xs px-2.5 py-1 gap-1.5',
+  md: 'text-sm px-3.5 py-1.5 gap-2',
+  lg: 'text-base px-4 py-2 gap-2.5',
 };
 
 const iconSizes = {
-  sm: 'w-3 h-3',
-  md: 'w-4 h-4',
-  lg: 'w-5 h-5',
+  sm: 14,
+  md: 16,
+  lg: 20,
+};
+
+// Variant styles - all have white text for professionalism
+const variantStyles = {
+  gold: {
+    bg: 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500',
+    border: 'border-amber-500/60',
+    shadow: 'shadow-[0_2px_8px_rgba(245,158,11,0.4),inset_0_1px_0_rgba(255,255,255,0.3)]',
+    text: 'text-white',
+    icon: 'text-amber-100',
+  },
+  silver: {
+    bg: 'bg-gradient-to-r from-gray-300 via-gray-200 to-gray-400',
+    border: 'border-gray-400/60',
+    shadow: 'shadow-[0_2px_8px_rgba(156,163,175,0.4),inset_0_1px_0_rgba(255,255,255,0.5)]',
+    text: 'text-gray-800',
+    icon: 'text-gray-600',
+  },
+  bronze: {
+    bg: 'bg-gradient-to-r from-orange-400 via-amber-500 to-orange-500',
+    border: 'border-orange-500/60',
+    shadow: 'shadow-[0_2px_8px_rgba(251,146,60,0.4),inset_0_1px_0_rgba(255,255,255,0.3)]',
+    text: 'text-white',
+    icon: 'text-orange-100',
+  },
+  primary: {
+    bg: 'bg-gradient-to-r from-brand-500 via-brand-600 to-brand-500',
+    border: 'border-brand-400/60',
+    shadow: 'shadow-[0_2px_8px_rgba(0,114,176,0.4),inset_0_1px_0_rgba(255,255,255,0.2)]',
+    text: 'text-white',
+    icon: 'text-brand-100',
+  },
 };
 
 export function CoinPill({
   amount,
   size = 'md',
   showIcon = true,
+  variant = 'gold',
   className = '',
 }: CoinPillProps) {
   const formattedAmount = amount.toLocaleString();
+  const styles = variantStyles[variant];
 
   return (
     <div
       className={`
-        inline-flex items-center font-semibold rounded-full
-        bg-gradient-to-r from-amber-100 to-yellow-100
-        dark:from-amber-900/30 dark:to-yellow-900/30
-        text-amber-700 dark:text-amber-400
-        border border-amber-200 dark:border-amber-800
+        coin-pill relative inline-flex items-center font-bold rounded-full
+        ${styles.bg}
+        ${styles.text}
+        border ${styles.border}
+        ${styles.shadow}
+        overflow-hidden
         ${sizeStyles[size]}
         ${className}
       `}
     >
-      {showIcon && <Coins className={iconSizes[size]} />}
-      <span>{formattedAmount}</span>
+      {/* Shimmer effect overlay */}
+      <div
+        className="
+          absolute inset-0 
+          bg-gradient-to-r from-transparent via-white/30 to-transparent
+          -translate-x-full
+        "
+        style={{
+          animation: 'shimmer 2.5s ease-in-out infinite',
+        }}
+      />
+
+      {showIcon && (
+        <Coin
+          size={iconSizes[size]}
+          weight="fill"
+          className={`relative z-10 ${styles.icon} drop-shadow-sm`}
+        />
+      )}
+      <span className="relative z-10 drop-shadow-sm tracking-tight">{formattedAmount}</span>
     </div>
   );
 }
@@ -52,9 +108,9 @@ interface CoinBalanceBarProps {
 
 export function CoinBalanceBar({ amount }: CoinBalanceBarProps) {
   return (
-    <div className="flex items-center justify-between py-3 px-4 bg-bg-secondary border-b border-border-secondary">
-      <span className="text-sm text-fg-secondary">Your Balance</span>
-      <CoinPill amount={amount} size="md" />
+    <div className="flex items-center justify-between py-4 px-5 bg-gradient-to-r from-brand-50 to-brand-100/50 dark:from-brand-950/50 dark:to-brand-900/30 border-b border-brand-200 dark:border-brand-800">
+      <span className="text-sm font-medium text-brand-700 dark:text-brand-300">Your Balance</span>
+      <CoinPill amount={amount} size="md" variant="gold" />
     </div>
   );
 }
