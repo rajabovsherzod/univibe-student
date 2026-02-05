@@ -394,18 +394,24 @@ a:focus-visible {
   }
 }
 
-/* Shimmer effect for premium components */
+/* Shimmer effect for premium components - continuous sweep */
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
   }
 
-  50%,
   100% {
-    transform: translateX(100%);
+    transform: translateX(200%);
   }
 }
 
 .animate-shimmer {
-  animation: shimmer 2.5s ease-in-out infinite;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes coinShimmer {
+  0% { transform: translate3d(-140%, 0, 0) rotate(18deg); opacity: 0; }
+  12% { opacity: 0.9; }
+  88% { opacity: 0.9; }
+  100% { transform: translate3d(140%, 0, 0) rotate(18deg); opacity: 0; }
 }

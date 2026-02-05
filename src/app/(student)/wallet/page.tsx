@@ -7,7 +7,17 @@ import { CoinBalanceBar, CoinPill } from '@/components/student/CoinPill';
 import { QuickFilters } from '@/components/student/FilterBar';
 import { NoTransactions } from '@/components/student/EmptyState';
 import { TransactionSkeleton } from '@/components/ui/Skeleton';
-import { TrendingUp, TrendingDown, Calendar, Gift, Trophy, ShoppingBag, RotateCcw } from 'lucide-react';
+import { PageHeader } from '@/components/student/PageHeader';
+import {
+  TrendUp,
+  TrendDown,
+  CalendarBlank,
+  Gift,
+  Trophy,
+  ShoppingBag,
+  ArrowCounterClockwise,
+  Wallet
+} from '@phosphor-icons/react';
 
 const filterOptions = [
   { value: 'all', label: 'All' },
@@ -16,11 +26,11 @@ const filterOptions = [
 ];
 
 const sourceIcons = {
-  event_attendance: Calendar,
+  event_attendance: CalendarBlank,
   achievement: Trophy,
   bonus: Gift,
   shop_redemption: ShoppingBag,
-  refund: RotateCcw,
+  refund: ArrowCounterClockwise,
 };
 
 export default function WalletPage() {
@@ -76,12 +86,11 @@ export default function WalletPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-fg-primary">Wallet</h1>
-        <p className="text-fg-secondary mt-1">
-          Track your coin earnings and spending
-        </p>
-      </div>
+      <PageHeader
+        title="Wallet"
+        subtitle="Track your coin earnings and spending"
+        icon={Wallet}
+      />
 
       {/* Balance Card */}
       <div className="bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl p-6 text-white">
@@ -93,14 +102,14 @@ export default function WalletPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/10 rounded-xl p-4">
             <div className="flex items-center gap-2 text-success-300 mb-1">
-              <TrendingUp className="w-4 h-4" />
+              <TrendUp className="w-4 h-4" />
               <span className="text-sm">Total Earned</span>
             </div>
             <p className="text-xl font-semibold">+{totalEarned.toLocaleString()}</p>
           </div>
           <div className="bg-white/10 rounded-xl p-4">
             <div className="flex items-center gap-2 text-error-300 mb-1">
-              <TrendingDown className="w-4 h-4" />
+              <TrendDown className="w-4 h-4" />
               <span className="text-sm">Total Spent</span>
             </div>
             <p className="text-xl font-semibold">-{totalSpent.toLocaleString()}</p>
@@ -149,7 +158,7 @@ export default function WalletPage() {
 }
 
 function TransactionRow({ transaction }: { transaction: Transaction }) {
-  const Icon = sourceIcons[transaction.source] || Calendar;
+  const Icon = sourceIcons[transaction.source] || CalendarBlank;
   const isEarned = transaction.type === 'earned';
 
   const formatTime = (dateStr: string) => {

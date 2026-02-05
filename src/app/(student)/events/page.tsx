@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { CalendarBlank } from '@phosphor-icons/react';
 import { getEvents } from '@/lib/api/student';
 import { type Event, type EventCategory, type EventStatus, type EventFilters } from '@/types/student';
 import { EventCard } from '@/components/student/EventCard';
 import { FilterBar, QuickFilters } from '@/components/student/FilterBar';
 import { NoEventsFound, NoSearchResults } from '@/components/student/EmptyState';
 import { EventCardSkeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/student/PageHeader';
 
 const categoryOptions = [
   { value: 'all', label: 'All Categories' },
@@ -71,12 +73,11 @@ export default function EventsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-fg-primary">Events</h1>
-        <p className="text-fg-secondary mt-1">
-          Discover and register for upcoming university events
-        </p>
-      </div>
+      <PageHeader
+        title="Events"
+        subtitle="Discover and register for upcoming university events"
+        icon={CalendarBlank}
+      />
 
       {/* Status Quick Filters */}
       <QuickFilters

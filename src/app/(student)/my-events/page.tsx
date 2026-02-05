@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { CalendarCheck, Coin } from '@phosphor-icons/react';
 import { getMyEvents } from '@/lib/api/student';
 import { type Event } from '@/types/student';
 import { EventCard } from '@/components/student/EventCard';
 import { QuickFilters } from '@/components/student/FilterBar';
 import { NoRegisteredEvents } from '@/components/student/EmptyState';
 import { EventCardSkeleton } from '@/components/ui/Skeleton';
-import { Coins } from 'lucide-react';
+import { PageHeader } from '@/components/student/PageHeader';
 
 const tabOptions = [
   { value: 'registered', label: 'Registered' },
@@ -39,12 +40,11 @@ export default function MyEventsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-fg-primary">My Events</h1>
-        <p className="text-fg-secondary mt-1">
-          Track your event registrations and attendance
-        </p>
-      </div>
+      <PageHeader
+        title="My Events"
+        subtitle="Track your event registrations and attendance"
+        icon={CalendarCheck}
+      />
 
       {/* Tabs */}
       <QuickFilters
@@ -68,7 +68,7 @@ export default function MyEventsPage() {
           {activeTab === 'attended' && (
             <div className="bg-success-50 dark:bg-success-900/20 rounded-xl border border-success-200 dark:border-success-800 p-4">
               <p className="text-success-700 dark:text-success-300 text-sm flex items-center gap-2">
-                <Coins className="w-4 h-4" />
+                <Coin className="w-4 h-4" />
                 You've earned coins from these events! Check your wallet for details.
               </p>
             </div>

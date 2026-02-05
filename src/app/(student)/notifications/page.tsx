@@ -1,26 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {
+  Bell,
+  Megaphone,
+  CalendarBlank,
+  Coin,
+  ShoppingBag,
+  Trophy,
+  Checks
+} from '@phosphor-icons/react';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/api/student';
 import { type Notification, type NotificationType } from '@/types/student';
 import { NoNotifications } from '@/components/student/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { ListSkeleton } from '@/components/ui/Skeleton';
-import {
-  Bell,
-  Megaphone,
-  Calendar,
-  Coins,
-  ShoppingBag,
-  Trophy,
-  CheckCheck,
-} from 'lucide-react';
+import { PageHeader } from '@/components/student/PageHeader';
 
 const typeIcons: Record<NotificationType, typeof Bell> = {
   announcement: Megaphone,
-  event_reminder: Calendar,
-  registration_update: Calendar,
-  coins_received: Coins,
+  event_reminder: CalendarBlank,
+  registration_update: CalendarBlank,
+  coins_received: Coin,
   redeem_status: ShoppingBag,
   achievement: Trophy,
 };
@@ -98,24 +99,22 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-fg-primary">Notifications</h1>
-          <p className="text-fg-secondary mt-1">
-            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
-          </p>
-        </div>
+      <PageHeader
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
+        icon={Bell}
+      >
         {unreadCount > 0 && (
           <Button
             variant="ghost"
             size="sm"
             onClick={handleMarkAllRead}
-            leftIcon={<CheckCheck className="w-4 h-4" />}
+            leftIcon={<Checks className="w-4 h-4" />}
           >
             Mark all read
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Loading State */}
       {loading && <ListSkeleton count={5} />}

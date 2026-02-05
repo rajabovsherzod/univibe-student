@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { CoinPill } from './CoinPill';
 import { RankChip } from './RankChip';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 interface StudentShellProps {
   children: React.ReactNode;
@@ -233,8 +234,12 @@ export function StudentShell({
         </button>
       </header>
 
-      {/* Desktop Header with Notifications */}
-      <header className="hidden lg:flex lg:fixed lg:top-0 lg:left-[280px] lg:right-0 lg:z-40 h-14 items-center justify-end gap-x-4 border-b border-border-secondary bg-bg-secondary/95 backdrop-blur-sm px-6">
+      {/* Desktop Header with Breadcrumbs and Notifications */}
+      <header className="hidden lg:flex lg:fixed lg:top-0 lg:left-[280px] lg:right-0 lg:z-40 h-14 items-center justify-between gap-x-4 border-b border-border-secondary bg-bg-secondary/95 backdrop-blur-sm px-6">
+        {/* Breadcrumbs */}
+        <Breadcrumbs />
+
+        {/* Notifications */}
         <Link
           href="/notifications"
           className="

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Storefront } from '@phosphor-icons/react';
 import { getShopItems, getStudent } from '@/lib/api/student';
 import { type ShopItem, type ShopCategory, type ShopFilters } from '@/types/student';
 import { ShopItemCard } from '@/components/student/ShopItemCard';
@@ -8,6 +9,7 @@ import { CoinBalanceBar } from '@/components/student/CoinPill';
 import { FilterBar, QuickFilters } from '@/components/student/FilterBar';
 import { NoShopItems, NoSearchResults } from '@/components/student/EmptyState';
 import { ShopItemSkeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/student/PageHeader';
 
 const categoryOptions = [
   { value: 'all', label: 'All' },
@@ -51,12 +53,11 @@ export default function ShopPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-fg-primary">University Shop</h1>
-        <p className="text-fg-secondary mt-1">
-          Redeem your coins for exclusive items and privileges
-        </p>
-      </div>
+      <PageHeader
+        title="University Shop"
+        subtitle="Redeem your coins for exclusive items and privileges"
+        icon={Storefront}
+      />
 
       {/* Coin Balance Bar */}
       <div className="bg-bg-secondary rounded-xl border border-border-secondary overflow-hidden">
