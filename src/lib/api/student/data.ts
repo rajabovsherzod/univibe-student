@@ -13,7 +13,7 @@ import {
 // Current Student
 export const mockStudent: Student = {
   id: 'student-1',
-  name: 'Alex Johnson',
+  name: 'DiyorDiyor530',
   email: 'alex.johnson@university.edu',
   avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
   faculty: 'Computer Science',

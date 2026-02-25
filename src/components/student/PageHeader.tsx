@@ -108,10 +108,6 @@ export function HomeHeader({ studentName, coins, rank, previousRank }: HomeHeade
             Here&apos;s what&apos;s happening at your university today
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <CoinPill amount={coins} size="md" variant="gold" />
-          <RankChip rank={rank} previousRank={previousRank} size="md" />
-        </div>
       </div>
     </div>
   );
