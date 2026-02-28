@@ -1,45 +1,33 @@
-import { getStudent, getAnnouncements, getEvents } from '@/lib/api/student';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getAnnouncements, getEvents } from '@/lib/api/student';
 import { AnnouncementCard } from '@/components/student/AnnouncementCard';
 import { EventsSwiper } from '@/components/student/EventsSwiper';
 import { HomeHeader } from '@/components/student/PageHeader';
 import { SectionHeader } from '@/components/student/SectionHeader';
 
 export default async function HomePage() {
-  const [student, announcements, events] = await Promise.all([
-    getStudent(),
+  const [session, announcements, events] = await Promise.all([
+    getServerSession(authOptions),
     getAnnouncements(),
     getEvents({ sortBy: 'date' }),
   ]);
 
   const regularAnnouncements = announcements.filter(a => !a.isPinned).slice(0, 3);
   const upcomingEvents = events.slice(0, 8);
+  const studentName = session?.user?.name || 'Talaba';
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <HomeHeader
-        studentName={student.name}
-        coins={student.coins}
-        rank={student.rank}
-        previousRank={student.previousRank}
-      />
+      <HomeHeader studentName={studentName} />
 
-      {/* Upcoming Events Carousel */}
       <section>
-        <SectionHeader
-          title="Upcoming Events"
-          iconName="calendar"
-          viewAllHref="/events"
-        />
+        <SectionHeader title="Yaqinlashayotgan tadbirlar" iconName="calendar" viewAllHref="/events" />
         <EventsSwiper events={upcomingEvents} />
       </section>
 
-      {/* Announcements */}
       <section>
-        <SectionHeader
-          title="Latest Announcements"
-          iconName="bell"
-        />
+        <SectionHeader title="So'nggi e'lonlar" iconName="bell" />
         <div className="space-y-3">
           {regularAnnouncements.map((announcement) => (
             <AnnouncementCard key={announcement.id} announcement={announcement} />

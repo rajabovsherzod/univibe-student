@@ -3,7 +3,7 @@ import { API_CONFIG } from "@/lib/api/config";
 import axiosInstance from "@/lib/axios";
 import { signIn } from "next-auth/react";
 
-/** 1. SEND OTP */
+/** Send OTP to email */
 export const useSendOTP = () => {
   return useMutation({
     mutationFn: async (data: { email: string }) => {
@@ -16,7 +16,7 @@ export const useSendOTP = () => {
   });
 };
 
-/** 2. VERIFY OTP & REGISTER */
+/** Verify OTP + register user (sends name, surname, university, password) */
 export const useVerifyOTP = () => {
   return useMutation({
     mutationFn: async (data: {
@@ -25,50 +25,26 @@ export const useVerifyOTP = () => {
       name: string;
       surname: string;
       university: string;
+      password: string;
     }) => {
       const response = await axiosInstance.post(
         API_CONFIG.endpoints.auth.otpVerify,
         data
       );
-      // Expected: { access, refresh, full_name, email, etc. }
+      // Response: { access, refresh, full_name, email, user_id, is_password_set }
+      const result = response.data;
 
-      // Since it returns access/refresh right away, we force a NextAuth signIn session seamlessly
+      // Auto sign-in via NextAuth credentials provider (direct token insertion)
       await signIn("credentials", {
         redirect: false,
-        access_token: response.data.access,
-        refresh_token: response.data.refresh,
-        email: response.data.email,
-        full_name: response.data.full_name,
-        role: "STUDENT"
+        access_token: result.access,
+        refresh_token: result.refresh,
+        email: result.email,
+        full_name: result.full_name,
+        role: "STUDENT",
       });
 
-      return response.data;
-    },
-  });
-};
-
-/** 3. SET PASSWORD */
-export const useSetPassword = () => {
-  return useMutation({
-    mutationFn: async (data: { password: string }) => {
-      const response = await axiosInstance.post(
-        API_CONFIG.endpoints.auth.passwordSet,
-        data
-      );
-      return response.data;
-    },
-  });
-};
-
-/** 4. RESUME INCOMPLETE SIGNUP */
-export const useResumeSignup = () => {
-  return useMutation({
-    mutationFn: async (data: { email: string }) => {
-      const response = await axiosInstance.post(
-        API_CONFIG.endpoints.auth.resumeSignup,
-        data
-      );
-      return response.data; // { message, expires_in_minutes }
+      return result;
     },
   });
 };

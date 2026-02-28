@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "name": "Univibe Student",
+  "short_name": "Univibe",
+  "description": "Universitetdagi voqealar, reyting, do'kon va boshqalar — bitta platformada.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#7f56d9",
+  "lang": "uz",
+  "scope": "/",
+  "categories": [
+    "education",
+    "social",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tadbirlar",
+      "short_name": "Tadbirlar",
+      "description": "Barcha tadbirlarni ko'rish",
+      "url": "/events"
+    },
+    {
+      "name": "Reyting",
+      "short_name": "Reyting",
+      "description": "Talabalar reytingi",
+      "url": "/leaderboard"
+    },
+    {
+      "name": "Do'kon",
+      "short_name": "Do'kon",
+      "description": "Mahsulotlar do'koni",
+      "url": "/shop"
+    }
+  ],
+  "screenshots": []
+}

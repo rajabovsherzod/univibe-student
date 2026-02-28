@@ -1,250 +1,691 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getStudent } from '@/lib/api/student';
-import { type Student } from '@/types/student';
-import { Button } from '@/components/ui/Button';
-import { CoinPill } from '@/components/student/CoinPill';
-import { RankChip } from '@/components/student/RankChip';
-import { ProfileSkeleton } from '@/components/ui/Skeleton';
-import { PageHeader } from '@/components/student/PageHeader';
+import { useState, useRef } from 'react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import type { ComponentType } from 'react';
+import Image from 'next/image';
+import { useSession, signOut } from 'next-auth/react';
+import { useForm, Controller } from 'react-hook-form';
+import { toast } from 'sonner';
 import {
-  Mail,
-  GraduationCap,
-  Users,
-  Calendar,
-  LogOut,
-  Moon,
-  Sun,
-  ChevronRight,
-  Wallet,
-  Trophy,
-} from 'lucide-react';
+  UserIcon, PencilSimpleIcon, CheckIcon, XIcon, CameraIcon,
+  CheckCircleIcon, XCircleIcon, ClockIcon, GraduationCapIcon, IdentificationCardIcon,
+  PhoneIcon, CalendarBlankIcon, BuildingsIcon, CalendarCheckIcon, ShieldIcon,
+  TelegramLogoIcon,
+} from '@phosphor-icons/react';
+import { parseDate } from '@internationalized/date';
+
+import {
+  useStudentMe, useFaculties, useDegreeLevels, useYearLevels, useUpdateProfile,
+} from '@/hooks/api/use-profile';
+import { useTelegramAccount, useTelegramConnectLink, useDisconnectTelegram } from '@/hooks/api/use-telegram';
+import { Input } from '@/components/base/input/input';
+import { Button } from '@/components/base/buttons/button';
+import { Select } from '@/components/base/select/select';
+import { SelectItem } from '@/components/base/select/select-item';
+import { DatePicker } from '@/components/application/date-picker/date-picker';
+import { useTranslation } from '@/lib/i18n/i18n';
+
+// ── Types ─────────────────────────────────────────────────────────────────
+
+interface ProfileForm {
+  name: string;
+  surname: string;
+  middle_name: string;
+  date_of_birth: string;
+  university_student_id: string;
+  faculty_id: string;
+  degree_level_id: string;
+  year_level_id: string;
+  contact_phone_number: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+const MONTHS = [
+  'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
+  'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr',
+];
+
+function fmtDate(s: string | null | undefined): string | null {
+  if (!s) return null;
+  try {
+    const d = new Date(s);
+    return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  } catch { return s; }
+}
+
+type StatusKey = 'approved' | 'waited' | 'rejected';
+
+const STATUS_CFG: Record<StatusKey, {
+  label: string;
+  pill: string;
+  ringCls: string;
+  badgeBg: string;
+  Icon: ComponentType<{ size?: number; weight?: 'fill' | 'regular' | 'bold'; className?: string }>;
+}> = {
+  approved: {
+    label: 'Tasdiqlangan',
+    pill: 'bg-success-100 text-success-700 dark:bg-success-600/20 dark:text-success-500',
+    ringCls: 'ring-success-500',
+    badgeBg: 'bg-success-500',
+    Icon: CheckCircleIcon,
+  },
+  waited: {
+    label: 'Kutilmoqda',
+    pill: 'bg-warning-100 text-warning-700 dark:bg-warning-600/20 dark:text-warning-500',
+    ringCls: 'ring-warning-500',
+    badgeBg: 'bg-warning-500',
+    Icon: ClockIcon,
+  },
+  rejected: {
+    label: 'Rad etildi',
+    pill: 'bg-error-100 text-error-700 dark:bg-error-600/20 dark:text-error-500',
+    ringCls: 'ring-error-500',
+    badgeBg: 'bg-error-500',
+    Icon: XCircleIcon,
+  },
+};
+
+// ── Sub-components ─────────────────────────────────────────────────────────
+
+function InfoRow({
+  icon: Icon, label, value,
+}: {
+  icon: ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value?: string | null;
+}) {
+  return (
+    <div className="flex items-center gap-4 py-3.5 border-b border-border-secondary last:border-0">
+      <div className="size-9 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
+        <Icon size={16} className="text-white" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">
+          {label}
+        </p>
+        <p className="text-base font-semibold text-fg-primary leading-snug">
+          {value ?? <span className="font-normal text-fg-tertiary italic">Kiritilmagan</span>}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border-secondary bg-bg-secondary shadow-sm overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-border-secondary">
+        <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{title}</p>
+      </div>
+      <div className="px-5 py-1">{children}</div>
+    </div>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div className="flex items-center gap-4 py-3.5 border-b border-border-secondary last:border-0">
+      <div className="size-9 rounded-xl skeleton-shimmer shrink-0" />
+      <div className="flex-1 space-y-1.5">
+        <div className="h-2.5 w-16 rounded skeleton-shimmer" />
+        <div className="h-4 w-36 rounded-md skeleton-shimmer" />
+      </div>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [student, setStudent] = useState<Student | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isDark, setIsDark] = useState(false);
+  const { t } = useTranslation();
+  const { data: session } = useSession();
+  const { data: profile, isPending } = useStudentMe();
+  const { mutateAsync: updateProfile } = useUpdateProfile();
 
-  useEffect(() => {
-    loadProfile();
-    setIsDark(document.documentElement.classList.contains('dark'));
-  }, []);
+  const universityId = profile?.university_public_id || session?.user?.universityId;
+  const { data: faculties = [] } = useFaculties(universityId);
+  const { data: degreeLevels = [] } = useDegreeLevels(universityId);
+  const { data: yearLevels = [] } = useYearLevels(universityId);
 
-  const loadProfile = async () => {
-    setLoading(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const { control, handleSubmit, reset, formState } = useForm<ProfileForm>({
+    defaultValues: {
+      name: '', surname: '', middle_name: '', date_of_birth: '',
+      university_student_id: '', faculty_id: '', degree_level_id: '',
+      year_level_id: '', contact_phone_number: '',
+    },
+  });
+
+  const startEdit = () => {
+    reset({
+      name: profile?.name || '',
+      surname: profile?.surname || '',
+      middle_name: profile?.middle_name || '',
+      date_of_birth: profile?.date_of_birth || '',
+      university_student_id: profile?.university_student_id || '',
+      faculty_id: profile?.faculty_public_id || '',
+      degree_level_id: profile?.degree_level_public_id || '',
+      year_level_id: profile?.year_level_public_id || '',
+      contact_phone_number: profile?.contact_phone_number || '',
+    });
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
+
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setPhotoFile(f);
+    setPhotoPreview(URL.createObjectURL(f));
+  };
+
+  const onSubmit = async (v: ProfileForm) => {
+    setSaving(true);
     try {
-      const data = await getStudent();
-      setStudent(data);
-    } catch (error) {
-      console.error('Failed to load profile:', error);
+      const fd = new FormData();
+      if (v.name) fd.append('name', v.name);
+      if (v.surname) fd.append('surname', v.surname);
+      if (v.middle_name) fd.append('middle_name', v.middle_name);
+      if (v.date_of_birth) fd.append('date_of_birth', v.date_of_birth);
+      if (v.university_student_id) fd.append('university_student_id', v.university_student_id);
+      if (v.faculty_id) fd.append('faculty_id', v.faculty_id);
+      if (v.degree_level_id) fd.append('degree_level_id', v.degree_level_id);
+      if (v.year_level_id) fd.append('year_level_id', v.year_level_id);
+      if (v.contact_phone_number) fd.append('contact_phone_number', v.contact_phone_number);
+      if (photoFile) fd.append('profile_photo', photoFile);
+
+      await updateProfile(fd);
+      toast.success("Profil yangilandi", { description: "Ma'lumotlaringiz saqlandi." });
+      setEditing(false);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: Record<string, unknown> } };
+      const msg =
+        (err?.response?.data?.detail as string) ||
+        (Object.values(err?.response?.data || {}).flat().find((x): x is string => typeof x === 'string')) ||
+        "Ma'lumotlarni saqlashda xatolik";
+      toast.error("Xatolik", { description: String(msg) });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    document.documentElement.classList.toggle('dark', newIsDark);
-    localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
-  };
-
-  const handleLogout = () => {
-    // Mock logout - in real app would clear auth
-    router.push('/');
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Profile" subtitle="View and manage your account" iconName="user" />
-        <ProfileSkeleton />
-      </div>
-    );
-  }
-
-  if (!student) {
-    return null;
-  }
+  const sc = profile?.status ? STATUS_CFG[profile.status] : null;
+  const displayName = profile?.full_name || session?.user?.name || 'Talaba';
+  const avatarSrc = photoPreview || profile?.profile_photo_url;
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <PageHeader title="Profile" subtitle="View and manage your account" iconName="user" />
+    <div className="space-y-4 pb-10">
 
-      {/* Student Card */}
-      <div className="bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl p-6 text-white">
-        <div className="flex items-start gap-4">
-          <div className="w-20 h-20 rounded-full border-4 border-white/30 overflow-hidden bg-brand-400 flex-shrink-0">
-            {student.avatar ? (
-              <img src={student.avatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-3xl font-bold">
-                {student.name.charAt(0)}
+      {/* ── Hero card ── */}
+      <div className="rounded-2xl border border-border-secondary bg-bg-secondary shadow-sm overflow-hidden">
+
+        {/* Gradient header */}
+        <div className="relative bg-gradient-to-br from-brand-600 via-brand-500 to-brand-700 px-5 sm:px-6 py-6 sm:py-8">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_30%_20%,white_1px,transparent_1px),radial-gradient(circle_at_70%_80%,white_1px,transparent_1px)] bg-[length:24px_24px]" />
+
+          <div className="relative z-10 flex flex-col items-center sm:flex-row sm:items-center gap-4 sm:gap-5">
+
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div className={[
+                'size-20 sm:size-24 rounded-2xl overflow-hidden bg-white/20 ring-4 ring-white/30',
+                sc ? `ring-[3px] ${sc.ringCls}` : '',
+              ].join(' ')}>
+                {isPending ? (
+                  <div className="size-full skeleton-shimmer" />
+                ) : avatarSrc ? (
+                  <Image
+                    src={avatarSrc}
+                    alt={displayName}
+                    width={96}
+                    height={96}
+                    className="size-full object-cover"
+                    unoptimized={!!photoPreview}
+                  />
+                ) : (
+                  <div className="size-full flex items-center justify-center text-white font-bold text-3xl select-none">
+                    {initial}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold truncate">{student.name}</h2>
-            <p className="text-brand-200 text-sm truncate">{student.email}</p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              <CoinPill amount={student.coins} size="sm" />
-              <RankChip rank={student.rank} previousRank={student.previousRank} size="sm" />
+
+              {/* Status badge */}
+              {!isPending && sc && (
+                <div className={[
+                  'absolute -bottom-1 -right-1 size-7 rounded-lg',
+                  sc.badgeBg,
+                  'border-[3px] border-brand-600',
+                  'flex items-center justify-center shadow-sm',
+                ].join(' ')}>
+                  <sc.Icon size={13} weight="fill" className="text-white" />
+                </div>
+              )}
+
+              {/* Camera overlay (edit mode) */}
+              {editing && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <CameraIcon size={22} weight="fill" className="text-white" />
+                  </button>
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
+                </>
+              )}
+            </div>
+
+            {/* Name + details */}
+            <div className="text-center sm:text-left flex-1 min-w-0">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                {isPending ? (
+                  <div className="h-6 w-48 rounded-lg bg-white/20 animate-pulse" />
+                ) : (
+                  <>
+                    <h1 className="text-lg sm:text-xl font-bold text-white leading-tight truncate">{displayName}</h1>
+                    {!editing && (
+                      <button
+                        type="button"
+                        onClick={startEdit}
+                        aria-label="Tahrirlash"
+                        className="shrink-0 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <PencilSimpleIcon size={14} weight="bold" />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {isPending ? (
+                <div className="space-y-1.5 mt-2">
+                  <div className="h-3.5 w-40 rounded bg-white/15 animate-pulse mx-auto sm:mx-0" />
+                  <div className="h-3.5 w-32 rounded bg-white/15 animate-pulse mx-auto sm:mx-0" />
+                </div>
+              ) : (
+                <div className="mt-1.5">
+                  <p className="text-sm text-white/70">{profile?.email || session?.user?.email}</p>
+                  {profile?.university_name && (
+                    <p className="mt-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-white/80">
+                      <BuildingsIcon size={14} className="text-white/60 shrink-0" />
+                      {profile.university_name}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <InfoCard icon={GraduationCap} label="Faculty" value={student.faculty} />
-        <InfoCard icon={Users} label="Group" value={student.group} />
-        <InfoCard icon={Calendar} label="Year" value={`Year ${student.year}`} />
-        <InfoCard icon={Mail} label="Email" value={student.email} />
-      </div>
+      {/* ── VIEW MODE ── */}
+      {!editing ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Section title={t('profile.personalInfoSection')}>
+              {isPending
+                ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+                : (
+                  <>
+                    <InfoRow icon={UserIcon} label={t('auth.name')} value={profile?.name} />
+                    <InfoRow icon={UserIcon} label={t('auth.surname')} value={profile?.surname} />
+                    <InfoRow icon={UserIcon} label={t('profile.middleName')} value={profile?.middle_name} />
+                    <InfoRow icon={CalendarBlankIcon} label={t('profile.dob')} value={fmtDate(profile?.date_of_birth)} />
+                    <InfoRow icon={PhoneIcon} label={t('profile.phone')} value={profile?.contact_phone_number} />
+                  </>
+                )}
+            </Section>
 
-      {/* Stats */}
-      <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-4">
-        <h3 className="font-semibold text-fg-primary mb-4">Quick Stats</h3>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">
-              {student.coins.toLocaleString()}
-            </p>
-            <p className="text-sm text-fg-tertiary">Coins</p>
+            <Section title={t('profile.academicSection')}>
+              {isPending
+                ? Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
+                : (
+                  <>
+                    <InfoRow icon={IdentificationCardIcon} label={t('profile.studentId')} value={profile?.university_student_id} />
+                    <InfoRow icon={GraduationCapIcon} label={t('profile.faculty')} value={profile?.faculty_name} />
+                    <InfoRow icon={GraduationCapIcon} label={t('profile.direction')} value={profile?.degree_level_name} />
+                    <InfoRow icon={GraduationCapIcon} label={t('profile.year')} value={profile?.year_level_name} />
+                  </>
+                )}
+            </Section>
           </div>
-          <div>
-            <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">
-              #{student.rank}
-            </p>
-            <p className="text-sm text-fg-tertiary">Rank</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">
-              {student.badges.length}
-            </p>
-            <p className="text-sm text-fg-tertiary">Badges</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Achievements / Badges */}
-      {student.badges.length > 0 && (
-        <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-4">
-          <h3 className="font-semibold text-fg-primary mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-500" />
-            Achievements
-          </h3>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
-            {student.badges.map((badge) => (
-              <div
-                key={badge.id}
-                className="flex flex-col items-center text-center p-3 rounded-lg bg-bg-tertiary"
-                title={badge.description}
-              >
-                <span className="text-3xl mb-2">{badge.icon}</span>
-                <p className="text-xs font-medium text-fg-primary line-clamp-2">{badge.name}</p>
-              </div>
-            ))}
+          {/* System info */}
+          <Section title={t('profile.systemSection')}>
+            {isPending
+              ? <div className="py-1">{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}</div>
+              : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border-secondary">
+                  {/* Status */}
+                  <div className="flex items-center gap-4 py-4 sm:pr-6">
+                    <div className="size-9 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
+                      <ShieldIcon size={16} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest mb-1.5">{t('profile.status')}</p>
+                      {sc ? (
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${sc.pill}`}>
+                          <sc.Icon size={11} weight="fill" />
+                          {sc.label}
+                        </span>
+                      ) : <span className="text-sm text-fg-tertiary">—</span>}
+                    </div>
+                  </div>
+                  {/* Registration date */}
+                  <div className="flex items-center gap-4 py-4 sm:px-6">
+                    <div className="size-9 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
+                      <CalendarCheckIcon size={16} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest mb-1">{t('profile.registeredAt')}</p>
+                      <p className="text-base font-semibold text-fg-primary">{fmtDate(profile?.created_at) ?? '—'}</p>
+                    </div>
+                  </div>
+                  {/* Last updated */}
+                  <div className="flex items-center gap-4 py-4 sm:pl-6">
+                    <div className="size-9 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
+                      <CalendarBlankIcon size={16} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest mb-1">{t('profile.lastUpdated')}</p>
+                      <p className="text-base font-semibold text-fg-primary">{fmtDate(profile?.updated_at) ?? '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+          </Section>
+
+          {/* Telegram ulash */}
+          <TelegramSection />
+
+          {/* Tizimdan chiqish */}
+          <LogoutSection />
+        </>
+      ) : (
+        /* ── EDIT MODE ── */
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+          <Section title={t('profile.personalInfoSection')}>
+            <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+              <Controller name="name" control={control}
+                rules={{ required: 'Ism majburiy' }}
+                render={({ field }) => (
+                  <Input {...field} label={`${t('auth.name')} *`} placeholder="Alisher"
+                    isInvalid={!!formState.errors.name}
+                    hint={formState.errors.name?.message} />
+                )}
+              />
+              <Controller name="surname" control={control}
+                rules={{ required: 'Familiya majburiy' }}
+                render={({ field }) => (
+                  <Input {...field} label={`${t('auth.surname')} *`} placeholder="Toshmatov"
+                    isInvalid={!!formState.errors.surname}
+                    hint={formState.errors.surname?.message} />
+                )}
+              />
+              <Controller name="middle_name" control={control}
+                render={({ field }) => (
+                  <Input {...field} label={t('profile.middleName')} placeholder="Baxtiyorovich" />
+                )}
+              />
+              <Controller name="contact_phone_number" control={control}
+                render={({ field }) => (
+                  <Input {...field} label={t('profile.phone')} placeholder="+998901234567" type="tel" />
+                )}
+              />
+              <Controller name="date_of_birth" control={control}
+                render={({ field }) => (
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-fg-primary">{t('profile.dob')}</label>
+                    <DatePicker
+                      value={field.value ? parseDate(field.value) : null}
+                      onChange={(v) => field.onChange(v ? v.toString() : '')}
+                      aria-label={t('profile.dob')}
+                    />
+                  </div>
+                )}
+              />
+            </div>
+          </Section>
+
+          <Section title={t('profile.academicSection')}>
+            <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+              <Controller name="university_student_id" control={control}
+                render={({ field }) => (
+                  <Input {...field} label={t('profile.studentId')} placeholder="21060101" />
+                )}
+              />
+              <div />
+              <Controller name="faculty_id" control={control}
+                render={({ field }) => (
+                  <Select label={t('profile.faculty')} placeholder={t('personalInfo.facultyPlaceholder')} size="md"
+                    selectedKey={field.value || null}
+                    onSelectionChange={(k) => field.onChange(k)}
+                    items={faculties.map(f => ({ id: f.public_id, label: f.name }))}>
+                    {(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}
+                  </Select>
+                )}
+              />
+              <Controller name="degree_level_id" control={control}
+                render={({ field }) => (
+                  <Select label={t('profile.direction')} placeholder={t('personalInfo.degreePlaceholder')} size="md"
+                    selectedKey={field.value || null}
+                    onSelectionChange={(k) => field.onChange(k)}
+                    items={degreeLevels.map(d => ({ id: d.public_id, label: d.name }))}>
+                    {(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}
+                  </Select>
+                )}
+              />
+              <Controller name="year_level_id" control={control}
+                render={({ field }) => (
+                  <Select label={t('profile.year')} placeholder={t('personalInfo.yearPlaceholder')} size="md"
+                    selectedKey={field.value || null}
+                    onSelectionChange={(k) => field.onChange(k)}
+                    items={yearLevels.map(y => ({ id: y.public_id, label: y.name }))}>
+                    {(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}
+                  </Select>
+                )}
+              />
+            </div>
+          </Section>
+
+          {/* Form actions */}
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              type="button"
+              color="primary-destructive"
+              size="md"
+              onClick={cancelEdit}
+              isDisabled={saving}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              type="submit"
+              color="primary"
+              size="md"
+              iconLeading={CheckIcon}
+              isLoading={saving}
+              isDisabled={saving}
+            >
+              Saqlash
+            </Button>
           </div>
-        </div>
+        </form>
       )}
+    </div>
+  );
+}
 
-      {/* Quick Links */}
-      <div className="space-y-2">
-        <QuickLink icon={Wallet} label="Wallet" href="/wallet" />
-        <QuickLink icon={Trophy} label="Leaderboard" href="/leaderboard" />
-      </div>
+// ── Telegram Section ──────────────────────────────────────────────────
 
-      {/* Settings */}
-      <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm overflow-hidden">
-        <h3 className="font-semibold text-fg-primary p-4 border-b border-border-secondary">
-          Settings
-        </h3>
+function TelegramSection() {
+  const { data: account, isLoading } = useTelegramAccount();
+  const notLinked = account === null;
+  const { data: connectLink, refetch: fetchLink, isFetching: linkLoading } = useTelegramConnectLink(false);
+  const { mutate: disconnect, isPending: disconnecting } = useDisconnectTelegram();
+  const [showDisconnect, setShowDisconnect] = useState(false);
 
-        {/* Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          className="
-            w-full flex items-center justify-between p-4
-            hover:bg-bg-tertiary transition-colors
-            focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900 focus-visible:ring-inset
-          "
-        >
-          <div className="flex items-center gap-3">
-            {isDark ? <Moon className="w-5 h-5 text-fg-tertiary" /> : <Sun className="w-5 h-5 text-fg-tertiary" />}
-            <span className="text-fg-primary">Theme</span>
+  const handleConnect = async () => {
+    const { data } = await fetchLink();
+    if (data?.connect_link) {
+      window.open(data.connect_link, '_blank');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Section title="Telegram">
+        <div className="py-4"><SkeletonRow /><SkeletonRow /></div>
+      </Section>
+    );
+  }
+
+  if (notLinked) {
+    return (
+      <div className="rounded-2xl border border-[#0088cc]/30 bg-[#0088cc]/5 dark:bg-[#0088cc]/10 shadow-sm overflow-hidden p-5">
+        <div className="flex items-start gap-4">
+          <div className="relative shrink-0">
+            <div className="size-11 rounded-xl bg-[#0088cc] flex items-center justify-center">
+              <TelegramLogoIcon size={20} weight="fill" className="text-white" />
+            </div>
+            <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-success-500 border-2 border-white dark:border-bg-secondary animate-pulse" />
           </div>
-          <span className="text-sm text-fg-secondary">{isDark ? 'Dark' : 'Light'}</span>
-        </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-fg-primary mb-0.5">Telegram hisobingizni ulang</p>
+            <p className="text-xs text-fg-tertiary mb-3 leading-relaxed">
+              Yangiliklardan tezda xabardor bo'lish va muhim bildirishnomalarni o'tkazib yubormaslik uchun Telegram hisobingizni ulang.
+            </p>
+            <button
+              type="button"
+              onClick={handleConnect}
+              disabled={linkLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0088cc] hover:bg-[#006daa] text-white text-sm font-semibold transition-colors disabled:opacity-60"
+            >
+              <TelegramLogoIcon size={16} weight="fill" />
+              {linkLoading ? 'Yuklanmoqda...' : 'Telegram ulash'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!account) return null;
+
+  return (
+    <Section title="Telegram">
+      <div className="py-3">
+        <div className="flex items-center gap-4 py-3 border-b border-border-secondary">
+          <div className="size-9 rounded-xl bg-[#0088cc] flex items-center justify-center shrink-0">
+            <TelegramLogoIcon size={16} weight="fill" className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">Foydalanuvchi</p>
+            <p className="text-base font-semibold text-fg-primary">
+              {account.telegram_username ? `@${account.telegram_username}` : account.telegram_fullname}
+            </p>
+          </div>
+        </div>
+        {account.phone_number && (
+          <div className="flex items-center gap-4 py-3 border-b border-border-secondary">
+            <div className="size-9 rounded-xl bg-[#0088cc] flex items-center justify-center shrink-0">
+              <PhoneIcon size={16} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">Telefon</p>
+              <p className="text-base font-semibold text-fg-primary">{account.phone_number}</p>
+            </div>
+          </div>
+        )}
+        <div className="flex items-center gap-4 py-3">
+          <div className="size-9 rounded-xl bg-success-600 flex items-center justify-center shrink-0">
+            <CheckCircleIcon size={16} weight="fill" className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">Holat</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-success-50 dark:bg-success-600/10 text-success-700 dark:text-success-400">
+              <CheckCircleIcon size={11} weight="fill" />Ulangan
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDisconnect(true)}
+            disabled={disconnecting}
+            className="text-xs font-medium text-error-600 dark:text-error-400 hover:underline disabled:opacity-60"
+          >
+            {disconnecting ? 'Uzilmoqda...' : 'Uzish'}
+          </button>
+        </div>
       </div>
 
-      {/* Logout */}
-      <Button
+      <ConfirmModal
+        isOpen={showDisconnect}
+        onClose={() => setShowDisconnect(false)}
+        onConfirm={() => { disconnect(); setShowDisconnect(false); }}
+        title="Telegramni uzish"
+        description="Telegram hisobingiz uziladi va bildirishnomalar to'xtatiladi. Davom etishni xohlaysizmi?"
+        confirmLabel="Uzish"
+        cancelLabel="Bekor qilish"
         variant="danger"
-        fullWidth
-        onClick={handleLogout}
-        leftIcon={<LogOut className="w-5 h-5" />}
-      >
-        Log Out
-      </Button>
-    </div>
+        isLoading={disconnecting}
+      />
+    </Section>
   );
 }
 
-function InfoCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 p-4 bg-bg-secondary rounded-xl border border-border-secondary shadow-sm">
-      <div className="
-        w-10 h-10 rounded-xl flex items-center justify-center
-        bg-gradient-to-br from-brand-500 to-brand-600
-        dark:from-brand-400 dark:to-brand-500
-        shadow-md shadow-brand-500/25
-      ">
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm text-fg-tertiary">{label}</p>
-        <p className="font-medium text-fg-primary truncate">{value}</p>
-      </div>
-    </div>
-  );
-}
+// ── Logout Section ───────────────────────────────────────────────────
 
-function QuickLink({
-  icon: Icon,
-  label,
-  href,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  href: string;
-}) {
+function LogoutSection() {
+  const [showLogout, setShowLogout] = useState(false);
+  const { t } = useTranslation();
+
   return (
-    <a
-      href={href}
-      className="
-        flex items-center justify-between p-4 bg-bg-secondary rounded-xl border border-border-secondary shadow-sm
-        hover:border-border-brand transition-colors
-        focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900
-      "
-    >
-      <div className="flex items-center gap-3">
-        <Icon className="w-5 h-5 text-fg-tertiary" />
-        <span className="font-medium text-fg-primary">{label}</span>
-      </div>
-      <ChevronRight className="w-5 h-5 text-fg-tertiary" />
-    </a>
+    <>
+      <Section title={t('profile.logoutSection')}>
+        <div className="py-4">
+          <button
+            type="button"
+            onClick={() => setShowLogout(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-500 text-white px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:ring-offset-2"
+          >
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+            </svg>
+            {t('profile.logoutButton')}
+          </button>
+        </div>
+      </Section>
+
+      <ConfirmModal
+        isOpen={showLogout}
+        onClose={() => setShowLogout(false)}
+        onConfirm={() => signOut({ callbackUrl: '/login' })}
+        title={t('profile.logoutTitle')}
+        description={t('profile.logoutDesc')}
+        confirmLabel={t('profile.logoutConfirm')}
+        cancelLabel={t('profile.logoutCancel')}
+        variant="danger"
+      />
+    </>
   );
 }

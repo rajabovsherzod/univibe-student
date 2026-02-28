@@ -2,8 +2,8 @@ import * as React from "react";
 
 type CoinOutlineIconProps = {
   size?: number | string;
-  color?: string; // hamma elementlar shu rangda bo'ladi
-  strokeWidth?: number; // tashqi/ichki aylana qalinligi
+  color?: string;
+  strokeWidth?: number;
   className?: string;
   title?: string;
 };
@@ -13,7 +13,7 @@ export function CoinOutlineIcon({
   color = "currentColor",
   strokeWidth = 18,
   className,
-  title = "Coin icon",
+  title = "Ball icon",
 }: CoinOutlineIconProps) {
   const titleId = React.useId();
 
@@ -30,7 +30,6 @@ export function CoinOutlineIcon({
     >
       {title ? <title id={titleId}>{title}</title> : null}
 
-      {/* Transparent fon: hech narsa fill qilinmaydi */}
       <circle
         cx="256"
         cy="256"
@@ -49,7 +48,6 @@ export function CoinOutlineIcon({
         opacity="0.9"
       />
 
-      {/* Logo */}
       <g
         fill={color}
         transform="translate(256 270) scale(0.62) translate(-512 -516.5)"

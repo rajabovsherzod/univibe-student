@@ -3,6 +3,9 @@
 @plugin "@tailwindcss/typography";
 @plugin "tailwindcss-react-aria-components";
 @plugin "tailwindcss-animate";
+
+/* Make Tailwind dark: variant respond to .dark-mode class (set by next-themes) */
+@variant dark (&:where(.dark-mode, .dark-mode *));
 /* ========================================
    UNIVIBE STUDENT - DESIGN TOKENS
    Ocean-blue brand, Untitled UI style
@@ -119,8 +122,8 @@
   --radius-full: 9999px;
 }
 
-/* Dark Theme */
-.dark {
+/* Dark Theme — class added by next-themes ThemeProvider */
+.dark-mode {
   --color-bg-primary: #040d12;
   --color-bg-secondary: #081117;
   --color-bg-tertiary: #0d1a22;
@@ -413,15 +416,45 @@ a:focus-visible {
   }
 }
 
-/* Shimmer effect for premium components - continuous sweep */
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
+/* ── Shimmer skeleton ─────────────────────────────────────────────────────── */
+:root {
+  --shimmer-base: var(--color-gray-200);
+  --shimmer-glow: #ffffff;
+}
 
-  100% {
-    transform: translateX(200%);
+.dark-mode {
+  --shimmer-base: var(--color-gray-700);
+  --shimmer-glow: var(--color-gray-600);
+}
+
+@keyframes shimmer-sweep {
+  0%   { transform: translateX(-100%); }
+  30%  { transform: translateX( 100%); }
+  100% { transform: translateX( 100%); }
+}
+
+@utility skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--shimmer-base);
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      90deg,
+      transparent          0%,
+      var(--shimmer-glow) 50%,
+      transparent         100%
+    );
+    animation: shimmer-sweep 2s linear infinite;
   }
+}
+
+/* Legacy shimmer for other components */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%);  }
 }
 
 .animate-shimmer {

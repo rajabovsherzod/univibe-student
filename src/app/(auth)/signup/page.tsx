@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,235 +8,186 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Mail01,
-  Lock01,
-  GraduationHat01,
-  ArrowRight,
-  CheckCircle,
-} from "@untitledui/icons";
+import { ArrowRight, ArrowLeft, Mail01 } from "@untitledui/icons";
 
 import { Input } from "@/components/base/input/input";
 import { Button } from "@/components/base/buttons/button";
 import { Select } from "@/components/base/select/select";
 import { PinInput } from "@/components/base/pin-input/pin-input";
 import { ThemeToggle } from "@/components/base/theme-toggle/theme-toggle";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useTranslation } from "@/lib/i18n/i18n";
 
-import {
-  useSendOTP,
-  useVerifyOTP,
-  useSetPassword,
-  useResumeSignup,
-} from "@/hooks/api/use-auth";
+import { useSendOTP, useVerifyOTP } from "@/hooks/api/use-auth";
 import { useUniversities } from "@/hooks/api/use-university";
 
-// ─── Validation schemas ────────────────────────────────────────────────────
-const Step1Schema = z.object({
-  email: z.string().email("Yaroqli elektron pochta kiritilmadi"),
-});
+import { SignupFormSchema, OtpSchema } from "./schema";
+import type { SignupFormType, OtpType } from "./schema";
 
-const Step2Schema = z.object({
-  code: z.string().length(6, "Kod 6 xonali bo'lishi shart"),
-  name: z.string().min(2, "Ism kamida 2 harfdan iborat bo'lishi kerak"),
-  surname: z.string().min(2, "Familiya kamida 2 harfdan iborat bo'lishi kerak"),
-  university: z.string().min(1, "Universitetni tanlang"),
-});
-
-const Step3Schema = z
-  .object({
-    password: z.string().min(6, "Parol kamida 6 belgidan iborat bo'lishi shart"),
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: "Parollar bir xil emas",
-    path: ["confirmPassword"],
-  });
-
-type Step1Type = z.infer<typeof Step1Schema>;
-type Step2Type = z.infer<typeof Step2Schema>;
-type Step3Type = z.infer<typeof Step3Schema>;
-
-type OtpStatus = "idle" | "error" | "success";
-
-const stepLabels = ["Pochta tasdiqlash", "Shaxsiy ma'lumotlar", "Xavfsizlik paroli"];
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 function extractApiError(e: any): string {
-  if (!e?.response) {
-    // Network / CORS / timeout
-    return "Server bilan ulanib bo'lmadi. Internetni tekshiring.";
-  }
+  if (!e?.response) return "Server bilan ulanib bo'lmadi. Internetni tekshiring.";
   const data = e.response.data;
   if (!data) return `Server xatosi (${e.response.status})`;
   if (typeof data === "string") return data;
-  // Standard DRF: { detail: "..." }
   if (data.detail) return String(data.detail);
-  // Custom: { message: "..." }
   if (data.message) return String(data.message);
-  // Field-level errors: { email: ["..."], non_field_errors: ["..."] }
-  const fieldMsgs = Object.values(data)
-    .flat()
-    .filter((v) => typeof v === "string") as string[];
+  const fieldMsgs = Object.values(data).flat().filter((v) => typeof v === "string") as string[];
   if (fieldMsgs.length > 0) return fieldMsgs[0];
   return `Xatolik yuz berdi (${e.response.status})`;
 }
 
-function getSlotClassName(status: OtpStatus) {
-  const base = "aspect-square h-auto !rounded-xl !font-bold !text-lg";
-  if (status === "error")
-    return `${base} !ring-2 !ring-error-500 !bg-error-50 dark:!bg-error-500/10 dark:!ring-error-400 !text-error-600 dark:!text-error-400`;
-  if (status === "success")
-    return `${base} !ring-2 !ring-success-500 !bg-success-50 dark:!bg-success-500/10 dark:!ring-success-400 !text-success-700 dark:!text-success-400`;
-  // idle – brand tint
-  return `${base} !ring-2 !ring-brand-200 dark:!ring-brand-800`;
-}
+type OtpStatus = "idle" | "error" | "success";
 
-// ─── Page ─────────────────────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────────────────────
 export default function SignupPage() {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [storedEmail, setStoredEmail] = useState("");
+  const { t } = useTranslation();
+  const [step, setStep] = useState<1 | 2>(1);
   const [otpStatus, setOtpStatus] = useState<OtpStatus>("idle");
+  const [countdown, setCountdown] = useState(0);
 
   const sendOtp = useSendOTP();
   const verifyOtp = useVerifyOTP();
-  const setPassword = useSetPassword();
-  const resumeSignup = useResumeSignup();
   const { data: universities, isLoading: isLoadingUniversities } = useUniversities();
 
-  const form1 = useForm<Step1Type>({
-    resolver: zodResolver(Step1Schema),
-    defaultValues: { email: "" },
-  });
-  const form2 = useForm<Step2Type>({
-    resolver: zodResolver(Step2Schema),
-    defaultValues: { code: "", name: "", surname: "", university: "" },
-  });
-  const form3 = useForm<Step3Type>({
-    resolver: zodResolver(Step3Schema),
-    defaultValues: { password: "", confirmPassword: "" },
+  // ── Forms
+  const signupForm = useForm<SignupFormType>({
+    resolver: zodResolver(SignupFormSchema),
+    defaultValues: { name: "", surname: "", university: "", email: "", password: "", confirmPassword: "" },
   });
 
-  // ── Step handlers ─────────────────────────────────────────────────────
-  const onStep1Submit = async (data: Step1Type) => {
+  const otpForm = useForm<OtpType>({
+    resolver: zodResolver(OtpSchema),
+    defaultValues: { code: "" },
+  });
+
+  // ── Session storage persistence
+  useEffect(() => {
+    const stored = sessionStorage.getItem("signupData");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.name) signupForm.setValue("name", parsed.name);
+        if (parsed.surname) signupForm.setValue("surname", parsed.surname);
+        if (parsed.university) signupForm.setValue("university", parsed.university);
+        if (parsed.email) signupForm.setValue("email", parsed.email);
+      } catch { }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const saveToSession = useCallback((data: Partial<SignupFormType>) => {
+    sessionStorage.setItem("signupData", JSON.stringify({
+      name: data.name, surname: data.surname, university: data.university, email: data.email,
+    }));
+  }, []);
+
+  // ── Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // ── Step 1: Submit form → send OTP
+  const onFormSubmit = async (data: SignupFormType) => {
+    saveToSession(data);
+    sessionStorage.setItem("signupPassword", data.password);
     try {
       await sendOtp.mutateAsync({ email: data.email });
-      setStoredEmail(data.email);
-      toast.success("Kod yuborildi", { description: `${data.email} pochtangizni tekshiring.` });
+      toast.success(t("auth.codeSent"), { description: `${data.email} ${t("auth.checkEmail")}` });
       setStep(2);
+      setCountdown(120);
     } catch (e: any) {
-      const isIncompleteAccount =
-        e?.response?.status === 400 &&
-        (e.response.data?.error === "incomplete_account" ||
-          e.response.data?.code === "incomplete_account");
-
-      if (isIncompleteAccount) {
-        try {
-          await resumeSignup.mutateAsync({ email: data.email });
-          setStoredEmail(data.email);
-          toast.success("Tasdiqlanmagan hisob!", {
-            description: "Ro'yxatdan o'tishni davom ettirish uchun email yuborildi.",
-          });
-          setStep(2);
-        } catch (re: any) {
-          toast.error("Xatolik", { description: extractApiError(re) });
-        }
-      } else {
-        toast.error("Xatolik", { description: extractApiError(e) });
-      }
+      toast.error(t("common.error"), { description: extractApiError(e) });
     }
   };
 
-  const onStep2Submit = async (data: Step2Type) => {
+  // ── Step 2: Verify OTP
+  const onOtpSubmit = async (data: OtpType) => {
+    const formData = signupForm.getValues();
+    const password = sessionStorage.getItem("signupPassword") || formData.password;
+    if (!formData.email || !formData.name || !formData.surname || !formData.university || !password) {
+      toast.error(t("common.error"));
+      setStep(1);
+      return;
+    }
     try {
       await verifyOtp.mutateAsync({
-        email: storedEmail,
-        code: data.code,
-        name: data.name,
-        surname: data.surname,
-        university: data.university,
+        email: formData.email, code: data.code, name: formData.name,
+        surname: formData.surname, university: formData.university, password,
       });
       setOtpStatus("success");
-      toast.success("Ajoyib!", { description: "Kod tasdiqlandi." });
-      await new Promise((r) => setTimeout(r, 500));
-      setStep(3);
+      toast.success(t("common.success"));
+      sessionStorage.removeItem("signupData");
+      sessionStorage.removeItem("signupPassword");
+      await new Promise((r) => setTimeout(r, 600));
+      router.push("/personal-info");
     } catch (e: any) {
       setOtpStatus("error");
-      toast.error("Tasdiqlashda xatolik", { description: extractApiError(e) });
+      toast.error(t("common.error"), { description: extractApiError(e) });
     }
   };
 
-  const onStep3Submit = async (data: Step3Type) => {
+  // ── Resend OTP
+  const handleResend = async () => {
+    const email = signupForm.getValues("email");
+    if (!email) return;
     try {
-      await setPassword.mutateAsync({ password: data.password });
-      setStep(4);
+      await sendOtp.mutateAsync({ email });
+      setCountdown(120);
+      setOtpStatus("idle");
+      otpForm.reset();
+      toast.success(t("auth.codeSent"));
     } catch (e: any) {
-      toast.error("Xatolik", { description: extractApiError(e) });
+      toast.error(t("common.error"), { description: extractApiError(e) });
     }
   };
 
-  const slotCn = getSlotClassName(otpStatus);
+  const universityItems = (universities || []).map((u) => ({ id: u.public_id, label: u.name }));
 
   return (
-    <div className="relative min-h-screen bg-bg-primary flex items-center justify-center px-4 py-12 overflow-hidden">
+    <div className="relative min-h-screen bg-bg-primary flex items-center justify-center px-4 py-8 overflow-hidden">
 
       {/* Watermark */}
       <div className="pointer-events-none select-none absolute inset-0 flex items-center justify-center" aria-hidden>
-        <Image
-          src="/icon.svg"
-          alt=""
-          width={480}
-          height={480}
-          className="opacity-[0.035] dark:opacity-[0.05]"
-          priority
-        />
+        <Image src="/icon.svg" alt="" width={480} height={480} className="opacity-[0.035] dark:opacity-[0.05]" priority />
       </div>
 
-      {/* Theme toggle */}
-      <div className="absolute top-5 right-5 z-20">
+      {/* Top bar */}
+      <div className="absolute top-5 right-5 z-20 flex items-center gap-2">
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-[440px]">
 
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3 mb-7">
-          <Link
-            href="/"
-            className="flex items-center justify-center rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
+        {/* Header */}
+        <div className="flex flex-col items-center gap-3 mb-6">
+          <Link href="/" className="flex items-center justify-center rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
             <Image src="/icon.svg" alt="Univibe" width={56} height={56} priority />
           </Link>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-primary">
-              Ro&apos;yxatdan o&apos;tish
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight text-primary">{t("auth.signup")}</h1>
             <p className="mt-1 text-sm text-tertiary">
-              Univibe platformasida hisobingizni yarating
+              {step === 1 ? t("auth.signupSubtitle") : `${signupForm.getValues("email")} ${t("auth.otpSent")}`}
             </p>
           </div>
         </div>
 
-        {/* Progress bar */}
-        {step < 4 && (
-          <div className="mb-5">
-            <div className="flex gap-1.5 mb-2">
-              {[1, 2, 3].map((s) => (
-                <div
-                  key={s}
-                  className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                    step >= s ? "bg-brand-solid" : "bg-border-secondary"
-                  }`}
-                />
-              ))}
-            </div>
-            <p className="text-xs font-medium text-tertiary">
-              Qadam {step} / 3 — {stepLabels[step - 1]}
-            </p>
+        {/* Progress */}
+        <div className="mb-5">
+          <div className="flex gap-1.5 mb-2">
+            {[1, 2].map((s) => (
+              <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= s ? "bg-brand-solid" : "bg-border-secondary"}`} />
+            ))}
           </div>
-        )}
+          <p className="text-xs font-medium text-tertiary">
+            {t("auth.step")} {step} / 2 — {step === 1 ? t("auth.stepInfo") : t("auth.stepVerify")}
+          </p>
+        </div>
 
         {/* Card */}
         <div className="rounded-2xl bg-bg-secondary border border-border-secondary shadow-sm p-7">
@@ -244,285 +195,75 @@ export default function SignupPage() {
 
             {/* ── STEP 1 ── */}
             {step === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-5 space-y-1">
-                  <h2 className="text-base font-semibold text-primary">
-                    Elektron pochtangizni kiriting
-                  </h2>
-                </div>
-                <form onSubmit={form1.handleSubmit(onStep1Submit)} className="flex flex-col gap-4">
-                  <Controller
-                    name="email"
-                    control={form1.control}
-                    render={({ field, fieldState }) => (
-                      <Input
-                        {...field}
-                        label="Elektron pochta"
-                        placeholder="student@univibe.uz"
-                        type="email"
-                        icon={Mail01}
-                        isInvalid={!!fieldState.error}
-                        hint={fieldState.error?.message}
-                        isDisabled={sendOtp.isPending || resumeSignup.isPending}
-                      />
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    size="xl"
-                    iconTrailing={ArrowRight}
-                    isLoading={sendOtp.isPending || resumeSignup.isPending}
-                    isDisabled={sendOtp.isPending || resumeSignup.isPending}
-                  >
-                    Kodni olish
+              <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                <form onSubmit={signupForm.handleSubmit(onFormSubmit)} className="flex flex-col gap-4">
+                  <Controller name="name" control={signupForm.control} render={({ field }) => (
+                    <Input {...field} label={t("auth.name")} placeholder={t("auth.namePlaceholder")} isInvalid={!!signupForm.formState.errors.name} hint={signupForm.formState.errors.name?.message} isDisabled={sendOtp.isPending} />
+                  )} />
+                  <Controller name="surname" control={signupForm.control} render={({ field }) => (
+                    <Input {...field} label={t("auth.surname")} placeholder={t("auth.surnamePlaceholder")} isInvalid={!!signupForm.formState.errors.surname} hint={signupForm.formState.errors.surname?.message} isDisabled={sendOtp.isPending} />
+                  )} />
+                  <Controller name="university" control={signupForm.control} render={({ field }) => (
+                    <Select label={t("auth.university")} placeholder={t("auth.universityPlaceholder")} items={universityItems} selectedKey={field.value || null} onSelectionChange={(key) => field.onChange(String(key))} isDisabled={isLoadingUniversities || sendOtp.isPending} isInvalid={!!signupForm.formState.errors.university} hint={signupForm.formState.errors.university?.message}>
+                      {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+                    </Select>
+                  )} />
+                  <Controller name="email" control={signupForm.control} render={({ field }) => (
+                    <Input {...field} label={t("auth.email")} placeholder={t("auth.emailPlaceholder")} type="email" isInvalid={!!signupForm.formState.errors.email} hint={signupForm.formState.errors.email?.message} isDisabled={sendOtp.isPending} />
+                  )} />
+                  <Controller name="password" control={signupForm.control} render={({ field }) => (
+                    <Input {...field} label={t("auth.password")} placeholder={t("auth.passwordMin")} type="password" isInvalid={!!signupForm.formState.errors.password} hint={signupForm.formState.errors.password?.message} isDisabled={sendOtp.isPending} />
+                  )} />
+                  <Controller name="confirmPassword" control={signupForm.control} render={({ field }) => (
+                    <Input {...field} label={t("auth.confirmPassword")} placeholder={t("auth.confirmPasswordPlaceholder")} type="password" isInvalid={!!signupForm.formState.errors.confirmPassword} hint={signupForm.formState.errors.confirmPassword?.message} isDisabled={sendOtp.isPending} />
+                  )} />
+                  <Button type="submit" className="w-full mt-2" size="xl" iconTrailing={ArrowRight} isLoading={sendOtp.isPending} isDisabled={sendOtp.isPending}>
+                    {t("auth.continue")}
                   </Button>
                 </form>
-                <p className="mt-5 text-center text-sm text-tertiary">
-                  Allaqachon hisobingiz bormi?{" "}
-                  <Link href="/login" className="font-semibold text-brand-solid hover:text-brand-700 hover:underline transition-colors">
-                    Kirish
-                  </Link>
-                </p>
               </motion.div>
             )}
 
-            {/* ── STEP 2 ── */}
+            {/* ── STEP 2: OTP ── */}
             {step === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-5 space-y-1">
-                  <h2 className="text-base font-semibold text-primary">
-                    Kodni tasdiqlang
-                  </h2>
-                  <p className="text-sm text-tertiary">
-                    <span className="font-semibold text-brand-solid">{storedEmail}</span>{" "}
-                    pochtasiga tasdiqlash kodi yuborildi.
-                  </p>
-                </div>
-
-                <form onSubmit={form2.handleSubmit(onStep2Submit)} className="flex flex-col gap-4">
-
-                  {/* ─── OTP Input ─────────────────────────────── */}
-                  <Controller
-                    name="code"
-                    control={form2.control}
-                    render={({ field, fieldState }) => (
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-secondary">
-                          Tasdiqlash kodi
-                        </label>
-                        <PinInput
-                          size="md"
-                          disabled={verifyOtp.isPending}
-                        >
-                          <PinInput.Group
-                            maxLength={6}
-                            value={field.value}
-                            onChange={(val) => {
-                              field.onChange(val);
-                              if (otpStatus !== "idle") setOtpStatus("idle");
-                            }}
-                            containerClassName="w-full justify-between mt-0.5"
-                          >
-                            <PinInput.Slot index={0} className={slotCn} />
-                            <PinInput.Slot index={1} className={slotCn} />
-                            <PinInput.Slot index={2} className={slotCn} />
-                            <PinInput.Separator />
-                            <PinInput.Slot index={3} className={slotCn} />
-                            <PinInput.Slot index={4} className={slotCn} />
-                            <PinInput.Slot index={5} className={slotCn} />
-                          </PinInput.Group>
-                        </PinInput>
-
-                        {/* Status hint */}
-                        {otpStatus === "error" || fieldState.error ? (
-                          <p className="flex items-center gap-1.5 text-xs font-medium text-error-600 dark:text-error-400 mt-0.5">
-                            <span className="size-1.5 rounded-full bg-error-500 shrink-0" />
-                            {fieldState.error?.message ?? "Noto'g'ri tasdiqlash kodi kiritildi."}
-                          </p>
-                        ) : otpStatus === "success" ? (
-                          <p className="flex items-center gap-1.5 text-xs font-medium text-success-600 dark:text-success-400 mt-0.5">
-                            <span className="size-1.5 rounded-full bg-success-500 shrink-0" />
-                            Kod muvaffaqiyatli tasdiqlandi.
-                          </p>
-                        ) : (
-                          <p className="text-xs text-tertiary mt-0.5">
-                            Pochtangizga yuborilgan 6 xonali kodni kiriting.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    name="university"
-                    control={form2.control}
-                    render={({ field, fieldState }) => (
-                      <Select
-                        label="Universitet"
-                        placeholder="Universitetni tanlang..."
-                        placeholderIcon={GraduationHat01}
-                        selectedKey={field.value || null}
-                        onSelectionChange={(k) => field.onChange(String(k))}
-                        isInvalid={!!fieldState.error}
-                        hint={fieldState.error?.message}
-                        isDisabled={verifyOtp.isPending || isLoadingUniversities}
-                        items={universities?.map((u) => ({ id: u.public_id, label: u.name })) || []}
-                      >
-                        {(item) => (
-                          <Select.Item id={item.id} textValue={item.label} label={item.label} />
-                        )}
-                      </Select>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Controller
-                      name="name"
-                      control={form2.control}
-                      render={({ field, fieldState }) => (
-                        <Input
-                          {...field}
-                          label="Ism"
-                          placeholder="Alisher"
-                          isInvalid={!!fieldState.error}
-                          hint={fieldState.error?.message}
-                          isDisabled={verifyOtp.isPending}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="surname"
-                      control={form2.control}
-                      render={({ field, fieldState }) => (
-                        <Input
-                          {...field}
-                          label="Familiya"
-                          placeholder="Navoiy"
-                          isInvalid={!!fieldState.error}
-                          hint={fieldState.error?.message}
-                          isDisabled={verifyOtp.isPending}
-                        />
-                      )}
-                    />
+              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+                <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="flex flex-col items-center gap-5">
+                  <div className="flex size-14 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-500/10 border-[6px] border-brand-100 dark:border-brand-500/20">
+                    <Mail01 className="size-6 text-brand-600 dark:text-brand-400" />
                   </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    size="xl"
-                    iconTrailing={CheckCircle}
-                    isLoading={verifyOtp.isPending}
-                    isDisabled={verifyOtp.isPending}
-                  >
-                    Tasdiqlash
+                  <div className="text-center">
+                    <h2 className="text-lg font-bold text-primary mb-1">{t("auth.otpTitle")}</h2>
+                    <p className="text-sm text-tertiary">
+                      <strong className="text-secondary">{signupForm.getValues("email")}</strong> {t("auth.otpSent")}
+                    </p>
+                  </div>
+                  <Controller name="code" control={otpForm.control} render={({ field }) => (
+                    <PinInput size="sm">
+                      <PinInput.Group maxLength={6} value={field.value} onChange={(val: string) => { field.onChange(val); if (otpStatus !== "idle") setOtpStatus("idle"); }} onComplete={() => otpForm.handleSubmit(onOtpSubmit)()}>
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <PinInput.Slot key={i} index={i} className={otpStatus === "error" ? "!ring-2 !ring-error-500 !bg-error-50 dark:!bg-error-500/10 dark:!ring-error-400" : otpStatus === "success" ? "!ring-2 !ring-success-500 !bg-success-50 dark:!bg-success-500/10 dark:!ring-success-400" : ""} />
+                        ))}
+                      </PinInput.Group>
+                    </PinInput>
+                  )} />
+                  {otpForm.formState.errors.code && <p className="text-sm text-error-600 dark:text-error-400">{otpForm.formState.errors.code.message}</p>}
+                  <Button type="submit" className="w-full" size="xl" isLoading={verifyOtp.isPending} isDisabled={verifyOtp.isPending}>
+                    {t("auth.otpVerify")}
                   </Button>
-                </form>
-              </motion.div>
-            )}
-
-            {/* ── STEP 3 ── */}
-            {step === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-5 space-y-1">
-                  <h2 className="text-base font-semibold text-primary">
-                    Parolni o&apos;rnating
-                  </h2>
-                  <p className="text-sm text-tertiary">
-                    Akkountingiz tasdiqlandi. Xavfsiz parol belgilang.
-                  </p>
-                </div>
-                <form onSubmit={form3.handleSubmit(onStep3Submit)} className="flex flex-col gap-4">
-                  <Controller
-                    name="password"
-                    control={form3.control}
-                    render={({ field, fieldState }) => (
-                      <Input
-                        {...field}
-                        label="Yangi parol"
-                        placeholder="••••••••"
-                        type="password"
-                        icon={Lock01}
-                        isInvalid={!!fieldState.error}
-                        hint={fieldState.error?.message}
-                        isDisabled={setPassword.isPending}
-                      />
+                  <div className="text-center">
+                    {countdown > 0 ? (
+                      <p className="text-sm text-tertiary">{t("auth.otpResendIn")} <span className="font-semibold text-secondary">{Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}</span></p>
+                    ) : (
+                      <button type="button" onClick={handleResend} disabled={sendOtp.isPending} className="text-sm font-semibold text-brand-solid hover:text-brand-700 transition-colors disabled:opacity-50">
+                        {t("auth.otpResend")}
+                      </button>
                     )}
-                  />
-                  <Controller
-                    name="confirmPassword"
-                    control={form3.control}
-                    render={({ field, fieldState }) => (
-                      <Input
-                        {...field}
-                        label="Parolni takrorlang"
-                        placeholder="••••••••"
-                        type="password"
-                        icon={Lock01}
-                        isInvalid={!!fieldState.error}
-                        hint={fieldState.error?.message}
-                        isDisabled={setPassword.isPending}
-                      />
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    size="xl"
-                    iconTrailing={ArrowRight}
-                    isLoading={setPassword.isPending}
-                    isDisabled={setPassword.isPending}
-                  >
-                    Tugatish
-                  </Button>
+                  </div>
+                  <button type="button" onClick={() => { setStep(1); setOtpStatus("idle"); otpForm.reset(); }} className="inline-flex items-center gap-1.5 text-sm font-medium text-tertiary hover:text-secondary transition-colors">
+                    <ArrowLeft className="size-4" />
+                    {t("auth.otpBack")}
+                  </button>
                 </form>
-              </motion.div>
-            )}
-
-            {/* ── STEP 4: SUCCESS ── */}
-            {step === 4 && (
-              <motion.div
-                key="step4"
-                initial={{ opacity: 0, scale: 0.95, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col items-center justify-center text-center py-4"
-              >
-                <div className="mb-5 flex size-20 items-center justify-center rounded-full bg-success-50 dark:bg-success-500/10 border-[8px] border-success-100 dark:border-success-500/20">
-                  <CheckCircle className="size-9 text-success-600 dark:text-success-400" />
-                </div>
-                <h2 className="text-xl font-bold tracking-tight text-primary mb-2">
-                  Ariza qabul qilindi!
-                </h2>
-                <p className="text-sm text-tertiary leading-relaxed mb-8 max-w-xs">
-                  Ma&apos;lumotlaringiz saqlandi. Universitet xodimlari profilingizni tasdiqlangach, tizimga kirishingiz mumkin.
-                </p>
-                <Button
-                  type="button"
-                  onClick={() => router.push("/login")}
-                  className="w-full"
-                  size="xl"
-                >
-                  Kirish sahifasiga o&apos;tish
-                </Button>
               </motion.div>
             )}
 
@@ -530,12 +271,10 @@ export default function SignupPage() {
         </div>
 
         {/* Footer */}
-        {step < 4 && (
+        {step === 1 && (
           <p className="mt-6 text-center text-sm text-tertiary">
-            Allaqachon hisobingiz bormi?{" "}
-            <Link href="/login" className="font-semibold text-brand-solid hover:text-brand-700 hover:underline transition-colors">
-              Kirish
-            </Link>
+            {t("auth.hasAccount")}{" "}
+            <Link href="/login" className="font-semibold text-brand-solid hover:text-brand-700 hover:underline transition-colors">{t("auth.loginLink")}</Link>
           </p>
         )}
       </div>

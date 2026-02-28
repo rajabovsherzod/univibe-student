@@ -1,170 +1,219 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import {
-  House,
-  CalendarBlank,
-  Trophy,
-  Storefront,
-  User,
-  Bell,
-  Moon,
-  Sun,
-  Wallet,
-  CalendarCheck,
+  HouseIcon,
+  CalendarBlankIcon,
+  TrophyIcon,
+  StorefrontIcon,
+  UserIcon,
+  BellIcon,
+  MoonIcon,
+  SunIcon,
+  WalletIcon,
+  CalendarCheckIcon,
+  SignOutIcon,
+  ClockIcon,
+  XCircleIcon,
 } from '@phosphor-icons/react';
-import { CoinPill } from './CoinPill';
-import { RankChip } from './RankChip';
+import { useStudentMe } from '@/hooks/api/use-profile';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { useTranslation } from '@/lib/i18n/i18n';
+import { useProfileStore } from '@/store/profile-store';
+import { useInitialUser, useTgBannerDismissed } from '@/providers/app-provider';
+import { TelegramBanner } from '@/components/student/TelegramBanner';
 
-interface StudentShellProps {
-  children: React.ReactNode;
-  student?: {
-    name: string;
-    coins: number;
-    rank: number;
-    previousRank?: number;
-    avatar?: string;
-  };
-  unreadNotifications?: number;
-}
-
-// Navigation items with Phosphor icons
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ size?: number; weight?: 'regular' | 'fill' | 'bold' }>;
 }
 
-interface NavDivider {
-  divider: true;
-}
-
+interface NavDivider { divider: true }
 type NavConfigItem = NavItem | NavDivider;
 
 const mainNavItems: NavConfigItem[] = [
-  { href: '/', label: 'Home', icon: House },
-  { href: '/events', label: 'Events', icon: CalendarBlank },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/shop', label: 'Shop', icon: Storefront },
+  { href: '/', labelKey: 'nav.home', icon: HouseIcon },
+  { href: '/events', labelKey: 'nav.events', icon: CalendarBlankIcon },
+  { href: '/leaderboard', labelKey: 'nav.leaderboard', icon: TrophyIcon },
+  { href: '/shop', labelKey: 'nav.shop', icon: StorefrontIcon },
   { divider: true },
-  { href: '/my-events', label: 'My Events', icon: CalendarCheck },
-  { href: '/wallet', label: 'Wallet', icon: Wallet },
+  { href: '/my-events', labelKey: 'nav.myEvents', icon: CalendarCheckIcon },
+  { href: '/wallet', labelKey: 'nav.wallet', icon: WalletIcon },
   { divider: true },
-  { href: '/profile', label: 'Profile', icon: User },
+  { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
 ];
 
-// Mobile bottom dock items
 const mobileNavItems: NavItem[] = [
-  { href: '/', label: 'Home', icon: House },
-  { href: '/events', label: 'Events', icon: CalendarBlank },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/shop', label: 'Shop', icon: Storefront },
-  { href: '/profile', label: 'Profile', icon: User },
+  { href: '/', labelKey: 'nav.home', icon: HouseIcon },
+  { href: '/events', labelKey: 'nav.events', icon: CalendarBlankIcon },
+  { href: '/leaderboard', labelKey: 'nav.leaderboard', icon: TrophyIcon },
+  { href: '/shop', labelKey: 'nav.shop', icon: StorefrontIcon },
+  { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
 ];
 
-export function StudentShell({
-  children,
-  student,
-  unreadNotifications = 0,
-}: StudentShellProps) {
-  const pathname = usePathname();
-  const [isDark, setIsDark] = useState(false);
+function StatusBadge({ status, t }: { status: 'waited' | 'approved' | 'rejected'; t: (key: string) => string }) {
+  if (status === 'approved') return null;
+  if (status === 'waited') return (
+    <div className="mx-2 flex items-center gap-1.5 rounded-lg bg-warning-50 dark:bg-warning-600/10 border border-warning-200 dark:border-warning-600/30 px-3 py-2 text-xs font-medium text-warning-700 dark:text-warning-500">
+      <ClockIcon size={12} weight="fill" className="shrink-0" />
+      <span>{t('profile.statusWaited')}</span>
+    </div>
+  );
+  return (
+    <div className="mx-2 flex items-center gap-1.5 rounded-lg bg-error-50 dark:bg-error-600/10 border border-error-200 dark:border-error-600/30 px-3 py-2 text-xs font-medium text-error-700 dark:text-error-500">
+      <XCircleIcon size={12} weight="fill" className="shrink-0" />
+      <span>{t('profile.statusRejected')}</span>
+    </div>
+  );
+}
 
+export function StudentShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const { data: session } = useSession();
+  const { data: profile, isError: profileError } = useStudentMe();
+  const [isDark, setIsDark] = useState(false);
+  const tgBannerDismissed = useTgBannerDismissed();
+
+  // ── Zustand store: cache profile data for instant sidebar rendering
+  const { profile: cachedProfile, setProfile: setCachedProfile } = useProfileStore();
+  const initialUser = useInitialUser();
+
+  // Sync API data → zustand store (when fresh data arrives)
   useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    setIsDark(isDarkMode);
+    if (profile) {
+      setCachedProfile({
+        user_public_id: profile.user_public_id,
+        name: profile.name,
+        surname: profile.surname,
+        full_name: profile.full_name,
+        user_name: profile.user_name,
+        user_surname: profile.user_surname,
+        email: profile.email,
+        profile_photo: profile.profile_photo_url || undefined,
+        university_name: profile.university_name,
+        university_public_id: profile.university_public_id,
+        faculty_name: profile.faculty_name,
+        degree_level_name: profile.degree_level_name,
+        year_level_name: profile.year_level_name,
+        status: profile.status,
+        contact_phone_number: profile.contact_phone_number,
+        date_of_birth: profile.date_of_birth,
+      });
+      // Write essential user data to cookie → server reads for zero-flash SSR
+      // Only name + surname (no middle name, no username)
+      const dispName = `${profile.name || ''} ${profile.surname || ''}`.trim();
+      const photoUrl = profile.profile_photo_url || '';
+      const userData = JSON.stringify({ name: dispName, email: profile.email, photo: photoUrl });
+      document.cookie = `user_data=${encodeURIComponent(userData)};path=/;max-age=31536000;SameSite=Lax`;
+    }
+  }, [profile, setCachedProfile]);
+
+  // ── Status gating
+  useEffect(() => {
+    if (profile?.status === 'waited') router.push('/waiting');
+  }, [profile, router]);
+  useEffect(() => {
+    if (profileError) router.push('/personal-info');
+  }, [profileError, router]);
+
+  // useLayoutEffect for theme → reads dark-mode class BEFORE paint (no flash)
+  useLayoutEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark-mode'));
   }, []);
 
   const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    document.documentElement.classList.toggle('dark', newIsDark);
-    localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle('dark-mode', next);
+    document.documentElement.classList.toggle('light-mode', !next);
+    // Write to BOTH localStorage AND cookie (server reads cookie for SSR)
+    localStorage.setItem('theme', next ? 'dark' : 'light');
+    document.cookie = `theme=${next ? 'dark' : 'light'};path=/;max-age=31536000;SameSite=Lax`;
   };
 
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
-  };
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
+  // Use cached profile for instant display, fall back to cookie → session
+  const profileName = (cachedProfile?.name || cachedProfile?.surname)
+    ? `${cachedProfile?.name || ''} ${cachedProfile?.surname || ''}`.trim()
+    : undefined;
+  const displayName = profileName || initialUser?.name || session?.user?.name || '\u00A0';
+  const displayEmail = cachedProfile?.email || initialUser?.email || session?.user?.email || '\u00A0';
+  const displayPhoto = cachedProfile?.profile_photo || initialUser?.photo || undefined;
+  const displayStatus = (cachedProfile?.status || profile?.status) as 'waited' | 'approved' | 'rejected' | undefined;
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <div className="min-h-screen bg-bg-primary">
-      {/* Desktop Sidebar - Untitled UI Style */}
+      {/* Desktop Sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-[280px] lg:flex-col">
-        <div className="flex grow flex-col gap-y-6 overflow-y-auto border-r border-border-secondary bg-bg-secondary px-4 py-6">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-border-secondary bg-bg-secondary px-4 py-6">
+
           {/* Logo */}
           <div className="flex h-10 shrink-0 items-center px-2">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center shadow-sm">
-                <span className="text-white font-bold text-base">U</span>
-              </div>
-              <span className="text-lg font-semibold text-fg-primary">
-                Univibe<span className="text-brand-600">Student</span>
+            <Link href="/" className="flex items-center gap-2.5">
+              <Image src="/icon.svg" alt="Univibe" width={36} height={36} priority className="shrink-0" />
+              <span className="text-lg font-bold text-fg-primary">
+                Uni<span className="text-brand-600">vibe</span>
               </span>
             </Link>
           </div>
 
-          {/* User Info Card */}
-          {student && (
-            <div className="mx-2 p-4 rounded-xl bg-bg-tertiary border border-border-secondary">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 flex-shrink-0 ring-2 ring-bg-secondary shadow-sm">
-                  {student.avatar ? (
-                    <img src={student.avatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-sm">
-                      {student.name.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-fg-primary truncate text-sm">{student.name}</p>
-                  <p className="text-xs text-fg-tertiary truncate">Student</p>
-                </div>
+          {/* User Card — instant from zustand store, no skeleton */}
+          <div className="mx-2 rounded-xl bg-bg-primary border border-border-secondary p-3.5">
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-full shrink-0 overflow-hidden ring-2 ring-border-secondary">
+                {displayPhoto ? (
+                  <Image src={displayPhoto} alt={displayName} fill className="object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-brand-600 text-white font-bold text-sm">
+                    {initial}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <CoinPill amount={student.coins} size="sm" variant="gold" />
-                <RankChip rank={student.rank} previousRank={student.previousRank} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-fg-primary truncate text-sm">{displayName}</p>
+                <p className="text-xs text-fg-tertiary truncate">{displayEmail}</p>
               </div>
             </div>
-          )}
+            {displayStatus && displayStatus !== 'approved' && (
+              <div className="mt-2.5">
+                <StatusBadge status={displayStatus} t={t} />
+              </div>
+            )}
+          </div>
 
           {/* Navigation */}
           <nav className="flex flex-1 flex-col px-2">
-            <ul className="flex flex-col gap-y-1">
+            <ul className="flex flex-col gap-y-0.5">
               {mainNavItems.map((item, index) => {
                 if ('divider' in item) {
-                  return (
-                    <li key={`divider-${index}`} className="my-2">
-                      <div className="h-px bg-border-secondary" />
-                    </li>
-                  );
+                  return <li key={`div-${index}`} className="my-2 h-px bg-border-secondary" />;
                 }
-
                 const Icon = item.icon;
                 const active = isActive(item.href);
-
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className={`
-                        group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
-                        transition-all duration-150 ease-out
-                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary
-                        ${active
-                          ? 'bg-brand-600 text-white shadow-sm'
-                          : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary'
-                        }
-                      `}
+                      className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${active
+                        ? 'bg-brand-600 text-white shadow-sm'
+                        : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary'
+                        }`}
                     >
                       <span className={`shrink-0 transition-colors ${active ? 'text-white' : 'text-fg-tertiary group-hover:text-fg-secondary'}`}>
                         <Icon size={20} weight={active ? 'fill' : 'regular'} />
                       </span>
-                      <span className="flex-1">{item.label}</span>
+                      <span className="flex-1">{t(item.labelKey)}</span>
                     </Link>
                   </li>
                 );
@@ -172,20 +221,26 @@ export function StudentShell({
             </ul>
           </nav>
 
-          {/* Bottom Section */}
-          <div className="px-2 space-y-2">
-            {/* Theme Toggle */}
+          {/* Bottom */}
+          <div className="px-2 space-y-0.5">
             <button
               onClick={toggleTheme}
-              className="
-                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary
-                transition-all duration-150
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary
-              "
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
-              {isDark ? <Sun size={20} /> : <Moon size={20} />}
-              <span className="flex-1 text-left">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+              {isDark ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+              <span className="flex-1 text-left">{isDark ? t('common.lightMode') : t('common.darkMode')}</span>
+            </button>
+            <button
+              onClick={() => {
+                // Clear cookies on logout so they reset on next login
+                document.cookie = 'tg_banner_dismissed=;path=/;max-age=0';
+                document.cookie = 'user_data=;path=/;max-age=0';
+                signOut({ callbackUrl: '/login' });
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-error-600 dark:text-error-500 hover:bg-error-50 dark:hover:bg-error-600/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500"
+            >
+              <SignOutIcon size={20} />
+              <span className="flex-1 text-left">{t('profile.logoutButton')}</span>
             </button>
           </div>
         </div>
@@ -194,79 +249,51 @@ export function StudentShell({
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-40 flex h-14 shrink-0 items-center gap-x-3 border-b border-border-secondary bg-bg-secondary/95 backdrop-blur-sm px-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">U</span>
-          </div>
-          <span className="font-semibold text-fg-primary">Univibe</span>
+          <Image src="/icon.svg" alt="Univibe" width={32} height={32} priority />
+          <span className="font-bold text-fg-primary">Univibe</span>
         </Link>
-
         <div className="flex-1" />
-
-        {student && <CoinPill amount={student.coins} size="sm" />}
-
         <Link
           href="/notifications"
-          className="
-            relative p-2 rounded-lg text-fg-secondary
-            hover:bg-bg-tertiary hover:text-fg-primary
-            transition-colors
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
-          "
+          className="relative p-2 rounded-lg text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
-          <Bell size={20} />
-          {unreadNotifications > 0 && (
-            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 rounded-full bg-error-500 text-white text-[10px] font-bold flex items-center justify-center">
-              {unreadNotifications > 9 ? '9+' : unreadNotifications}
-            </span>
-          )}
+          <BellIcon size={20} />
         </Link>
-
+        <LanguageSwitcher />
         <button
           onClick={toggleTheme}
-          className="
-            p-2 rounded-lg text-fg-secondary
-            hover:bg-bg-tertiary hover:text-fg-primary
-            transition-colors
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
-          "
+          className="p-2 rounded-lg text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
-          {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          {isDark ? <SunIcon size={20} /> : <MoonIcon size={20} />}
         </button>
       </header>
 
-      {/* Desktop Header with Breadcrumbs and Notifications */}
+      {/* Desktop Top Bar */}
       <header className="hidden lg:flex lg:fixed lg:top-0 lg:left-[280px] lg:right-0 lg:z-40 h-14 items-center justify-between gap-x-4 border-b border-border-secondary bg-bg-secondary/95 backdrop-blur-sm px-6">
-        {/* Breadcrumbs */}
         <Breadcrumbs />
-
-        {/* Notifications */}
-        <Link
-          href="/notifications"
-          className="
-            relative p-2 rounded-lg text-fg-secondary
-            hover:bg-bg-tertiary hover:text-fg-primary
-            transition-colors
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
-          "
-        >
-          <Bell size={20} />
-          {unreadNotifications > 0 && (
-            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 rounded-full bg-error-500 text-white text-[10px] font-bold flex items-center justify-center">
-              {unreadNotifications > 9 ? '9+' : unreadNotifications}
-            </span>
-          )}
-        </Link>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <Link
+            href="/notifications"
+            className="relative p-2 rounded-lg text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <BellIcon size={20} />
+          </Link>
+        </div>
       </header>
 
       {/* Main Content */}
       <main className="lg:pl-[280px] lg:pt-14 pb-20 lg:pb-0">
-        <div className="px-4 py-6 sm:px-6 lg:px-8">
+        <div className="pt-4">
+          <TelegramBanner initialDismissed={tgBannerDismissed} />
+        </div>
+        <div className="px-4 py-2 sm:px-6 lg:px-8">
           {children}
         </div>
       </main>
 
-      {/* Mobile Bottom Dock Navigation */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border-secondary bg-bg-secondary/95 backdrop-blur-sm safe-area-pb">
+      {/* Mobile Bottom Nav */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border-secondary bg-bg-secondary/95 backdrop-blur-sm">
         <div className="flex justify-around items-center h-16 px-1">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
@@ -275,23 +302,14 @@ export function StudentShell({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`
-                  relative flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl
-                  transition-all duration-150 min-w-[56px]
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
-                  ${active
-                    ? 'text-brand-600 dark:text-brand-400'
-                    : 'text-fg-tertiary hover:text-fg-secondary'
-                  }
-                `}
+                className={`relative flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-150 min-w-[56px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${active ? 'text-brand-600 dark:text-brand-400' : 'text-fg-tertiary hover:text-fg-secondary'
+                  }`}
               >
                 <span className={`transition-transform ${active ? 'scale-110' : ''}`}>
                   <Icon size={22} weight={active ? 'fill' : 'regular'} />
                 </span>
-                <span className="text-[10px] font-medium">{item.label}</span>
-                {active && (
-                  <div className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-brand-600 dark:bg-brand-400" />
-                )}
+                <span className="text-[10px] font-medium">{t(item.labelKey)}</span>
+                {active && <div className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-brand-600 dark:bg-brand-400" />}
               </Link>
             );
           })}

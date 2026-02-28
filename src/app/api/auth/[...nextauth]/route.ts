@@ -1,6 +1,30 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+declare module "next-auth" {
+  interface Session {
+    accessToken?: string;
+    refreshToken?: string;
+    user: {
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      universityId?: string;
+      role?: string;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    accessToken?: string;
+    refreshToken?: string;
+    fullName?: string;
+    role?: string;
+    universityId?: string;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -8,16 +32,16 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        // Used to distinguish normal login vs otp login token insertion
         access_token: { label: "Access Token", type: "text" },
         refresh_token: { label: "Refresh Token", type: "text" },
         full_name: { label: "Name", type: "text" },
-        role: { label: "Role", type: "text" }
+        role: { label: "Role", type: "text" },
+        university_id: { label: "University ID", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials) return null;
 
-        // If passing tokens directly (from OTP registration flow)
+        // Direct token insertion (OTP registration flow)
         if (credentials.access_token && credentials.refresh_token) {
           return {
             id: credentials.email || Date.now().toString(),
@@ -25,15 +49,14 @@ export const authOptions: NextAuthOptions = {
             accessToken: credentials.access_token,
             refreshToken: credentials.refresh_token,
             fullName: credentials.full_name || "Talaba",
-            role: credentials.role || "STUDENT"
+            role: credentials.role || "STUDENT",
+            universityId: credentials.university_id || "",
           };
         }
 
-        // Standard Login
+        // Standard email+password login
         try {
-          // Since API url isn't fully absolute if NEXT_PUBLIC_API_URL handles it, we mock or fetch
-          // But we must fetch server-side absolute
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.univibe.uz";
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz";
           const res = await fetch(`${baseUrl}/api/v1/user/auth/login/`, {
             method: "POST",
             body: JSON.stringify({
@@ -44,12 +67,13 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!res.ok) {
-            throw new Error("Email yoki parol noto'g'ri");
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err?.detail || "Email yoki parol noto'g'ri");
           }
 
           const user = await res.json();
 
-          if (user && user.access_token) {
+          if (user?.access_token) {
             return {
               id: user.email || Date.now().toString(),
               email: user.email,
@@ -57,31 +81,34 @@ export const authOptions: NextAuthOptions = {
               refreshToken: user.refresh_token,
               fullName: user.full_name,
               role: user.role,
-              universityId: user.university_id
+              universityId: user.university_id || "",
             };
           }
           return null;
-        } catch (error) {
-          throw new Error("Tarmoq xatosi yoki email noto'g'ri");
+        } catch (error: any) {
+          throw new Error(error?.message || "Tarmoq xatosi");
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user }) {
       if (user) {
         token.accessToken = (user as any).accessToken;
         token.refreshToken = (user as any).refreshToken;
         token.fullName = (user as any).fullName;
         token.role = (user as any).role;
+        token.universityId = (user as any).universityId;
       }
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
-      session.refreshToken = token.refreshToken as string;
+      session.accessToken = token.accessToken;
+      session.refreshToken = token.refreshToken;
       if (session.user) {
         session.user.name = token.fullName as string;
+        session.user.universityId = token.universityId as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
@@ -94,5 +121,4 @@ export const authOptions: NextAuthOptions = {
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

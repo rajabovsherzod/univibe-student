@@ -1,6 +1,6 @@
 'use client';
 
-import { Coin } from '@phosphor-icons/react';
+import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
 
 interface CoinPillProps {
   amount: number;
@@ -93,7 +93,7 @@ export function CoinPill({
 
       {showIcon && (
         <span className={`relative z-10 ${styles.icon} drop-shadow-sm`}>
-          <Coin size={iconSizes[size]} weight="fill" />
+          <CoinOutlineIcon size={iconSizes[size]} />
         </span>
       )}
 
