@@ -1,6 +1,7 @@
 import { getLeaderboard, getCurrentUserRank } from '@/lib/api/student';
 import { LeaderboardPodium, LeaderboardRow, YourRankCard } from '@/components/student/LeaderboardComponents';
 import { PageHeader } from '@/components/student/PageHeader';
+import { SectionHeader } from '@/components/student/SectionHeader';
 
 export default async function LeaderboardPage() {
   const [leaderboard, currentUserRank] = await Promise.all([
@@ -27,7 +28,7 @@ export default async function LeaderboardPage() {
 
       {/* Top 20 List */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-fg-primary">Top 20</h2>
+        <SectionHeader title="Top 20" iconName="trophy" />
         <div className="space-y-2">
           {rest.map((entry) => (
             <LeaderboardRow

@@ -24,6 +24,8 @@ import { EventCard } from '@/components/student/EventCard';
 import { CoinPill } from '@/components/student/CoinPill';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from 'sonner';
+import { SectionHeader, SectionTitle } from '@/components/student/SectionHeader';
+import { IconWrapper } from '@/components/ui/IconWrapper';
 
 export default function EventDetailsPage() {
   const params = useParams();
@@ -178,7 +180,7 @@ export default function EventDetailsPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
           <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-fg-primary mb-4">About This Event</h2>
+            <SectionTitle title="About This Event" iconName="info" />
             <p className="text-fg-secondary leading-relaxed">{event.description}</p>
 
             <div className="flex flex-wrap gap-2 mt-4">
@@ -196,10 +198,7 @@ export default function EventDetailsPage() {
           {/* Rewards Section */}
           {(event.coinReward > 0 || event.badgeReward) && (
             <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
-              <h2 className="text-lg font-semibold text-fg-primary mb-4 flex items-center gap-2">
-                <Award className="w-5 h-5 text-amber-500" />
-                Rewards for Attendance
-              </h2>
+              <SectionTitle title="Rewards for Attendance" iconName="star" />
               <div className="flex flex-wrap gap-4">
                 {event.coinReward > 0 && (
                   <div className="flex items-center gap-3 bg-white dark:bg-black/20 rounded-lg px-4 py-3">
@@ -233,14 +232,14 @@ export default function EventDetailsPage() {
           {/* Event Details Card */}
           <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6 space-y-4">
             <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-brand-500 mt-0.5 flex-shrink-0" />
+              <IconWrapper iconName="calendar" size="md" />
               <div>
                 <p className="text-sm text-fg-tertiary">Date</p>
                 <p className="font-medium text-fg-primary">{formatDate(event.date)}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-brand-500 mt-0.5 flex-shrink-0" />
+              <IconWrapper iconName="clock" size="md" />
               <div>
                 <p className="text-sm text-fg-tertiary">Time</p>
                 <p className="font-medium text-fg-primary">
@@ -249,21 +248,21 @@ export default function EventDetailsPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <MapPin className="w-5 h-5 text-brand-500 mt-0.5 flex-shrink-0" />
+              <IconWrapper iconName="map-pin" size="md" />
               <div>
                 <p className="text-sm text-fg-tertiary">Location</p>
                 <p className="font-medium text-fg-primary">{event.location}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <User className="w-5 h-5 text-brand-500 mt-0.5 flex-shrink-0" />
+              <IconWrapper iconName="user" size="md" />
               <div>
                 <p className="text-sm text-fg-tertiary">Organizer</p>
                 <p className="font-medium text-fg-primary">{event.organizer}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Users className="w-5 h-5 text-brand-500 mt-0.5 flex-shrink-0" />
+              <IconWrapper iconName="users" size="md" />
               <div>
                 <p className="text-sm text-fg-tertiary">Capacity</p>
                 <p className={`font-medium ${isFull ? 'text-error-600 dark:text-error-400' : 'text-fg-primary'}`}>
@@ -326,9 +325,7 @@ export default function EventDetailsPage() {
       {/* Similar Events */}
       {similarEvents.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-fg-primary mb-4">
-            Similar Events
-          </h2>
+          <SectionHeader title="Similar Events" iconName="calendar" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {similarEvents.map((e) => (
               <EventCard key={e.id} event={e} />

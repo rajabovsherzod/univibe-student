@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Toaster } from "sonner";
+import { AppProvider } from "@/providers/app-provider";
+import { ThemeToaster } from "@/providers/theme-toaster";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,17 +37,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} antialiased`}>
-        {children}
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            style: {
-              background: 'var(--color-bg-secondary)',
-              color: 'var(--color-fg-primary)',
-              border: '1px solid var(--color-border-secondary)',
-            },
-          }}
-        />
+        <AppProvider>
+          {children}
+          <ThemeToaster />
+        </AppProvider>
       </body>
     </html>
   );

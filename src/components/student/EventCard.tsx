@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarBlank, MapPin, Users, Coin, Clock, ArrowRight } from '@phosphor-icons/react';
+import { MapPin, Coin } from '@phosphor-icons/react';
 import { type Event } from '@/types/student';
 import { StatusBadge, CategoryBadge } from '@/components/ui/Badge';
+import { IconWrapper, ViewArrow } from '@/components/ui/IconWrapper';
 
 interface EventCardProps {
   event: Event;
@@ -128,23 +129,17 @@ export function EventCard({ event, variant = 'default' }: EventCardProps) {
 
         <div className="space-y-2.5 mb-4">
           <div className="flex items-center gap-2.5 text-sm text-fg-secondary">
-            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-950">
-              <Clock size={16} weight="fill" className="text-brand-600 dark:text-brand-400" />
-            </span>
+            <IconWrapper iconName="clock" size="md" />
             <span>
               {formatTime(event.startTime)} - {formatTime(event.endTime)}
             </span>
           </div>
           <div className="flex items-center gap-2.5 text-sm text-fg-secondary">
-            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-950">
-              <MapPin size={16} weight="fill" className="text-brand-600 dark:text-brand-400" />
-            </span>
+            <IconWrapper iconName="map-pin" size="md" />
             <span className="truncate">{event.location}</span>
           </div>
           <div className="flex items-center gap-2.5 text-sm">
-            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-950">
-              <Users size={16} weight="fill" className="text-brand-600 dark:text-brand-400" />
-            </span>
+            <IconWrapper iconName="users" size="md" />
             <span className={isFull ? 'text-error-600 dark:text-error-400 font-medium' : 'text-fg-secondary'}>
               {isFull ? 'No spots left' : `${spotsLeft} spots left`}
             </span>
@@ -165,9 +160,7 @@ export function EventCard({ event, variant = 'default' }: EventCardProps) {
           </div>
 
           {/* View arrow */}
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-50 dark:bg-brand-950 group-hover:bg-brand-100 dark:group-hover:bg-brand-900 transition-colors">
-            <ArrowRight size={16} weight="bold" className="text-brand-600 dark:text-brand-400 group-hover:translate-x-0.5 transition-transform" />
-          </div>
+          <ViewArrow size="md" />
         </div>
       </div>
     </Link>

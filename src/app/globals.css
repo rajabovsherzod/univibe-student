@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@plugin "@tailwindcss/typography";
+@plugin "tailwindcss-react-aria-components";
+@plugin "tailwindcss-animate";
 /* ========================================
    UNIVIBE STUDENT - DESIGN TOKENS
    Ocean-blue brand, Untitled UI style
@@ -85,6 +88,9 @@
   --shadow-xl: 0px 20px 24px -4px rgba(16, 24, 40, 0.08), 0px 8px 8px -4px rgba(16, 24, 40, 0.03);
   --shadow-2xl: 0px 24px 48px -12px rgba(16, 24, 40, 0.18);
 
+  --shadow-skeumorphic: 0px 0px 0px 1px rgba(10, 13, 18, 0.18) inset, 0px -2px 0px 0px rgba(10, 13, 18, 0.05) inset;
+  --shadow-xs-skeumorphic: var(--shadow-skeumorphic), var(--shadow-xs);
+
   /* Focus Ring - NEVER WHITE */
   --ring-brand: 0 0 0 4px var(--color-brand-100);
   --ring-brand-shadow: 0 0 0 4px rgba(0, 114, 176, 0.24);
@@ -101,12 +107,15 @@
   --spacing-12: 3rem;
   --spacing-16: 4rem;
 
-  /* Border Radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
+  /* Border Radius - Synced to Univibe Admins */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-DEFAULT: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
   --radius-full: 9999px;
 }
 
@@ -155,6 +164,13 @@
   --color-fg-tertiary: var(--color-fg-tertiary);
   --color-fg-disabled: var(--color-fg-disabled);
   --color-fg-brand: var(--color-fg-brand);
+
+  /* Theme extensions for Tailwind CSS natively mapping to Untitled UI's semantic tokens */
+  --color-primary_on-brand: #ffffff;
+
+  --color-brand: var(--color-brand-500);
+  --color-brand-solid: var(--color-brand-600);
+  --color-brand-solid_hover: var(--color-brand-700);
 
   --color-border-primary: var(--color-border-primary);
   --color-border-secondary: var(--color-border-secondary);
@@ -224,13 +240,18 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+  --shadow-skeumorphic: var(--shadow-skeumorphic);
+  --shadow-xs-skeumorphic: var(--shadow-xs-skeumorphic);
 
   /* Border Radius */
+  --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius-DEFAULT);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
   --radius-2xl: var(--radius-2xl);
+  --radius-3xl: var(--radius-3xl);
   --radius-full: var(--radius-full);
 }
 
@@ -248,28 +269,26 @@ body {
   outline: none;
 }
 
+/* Remove browser default outlines globally */
 *:focus-visible {
   outline: none;
-  box-shadow: var(--ring-brand-shadow);
 }
 
-/* Button focus ring */
+/* Button focus ring — keep for accessibility */
 button:focus-visible,
 [role="button"]:focus-visible {
   outline: none;
   box-shadow: var(--ring-brand-shadow);
 }
 
-/* Input focus ring */
+/* Input focus ring — NO box-shadow (AriaGroup handles border-color change) */
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
-  border-color: var(--color-brand-500);
-  box-shadow: var(--ring-brand-shadow);
 }
 
-/* Link focus ring */
+/* Link focus ring — keep for accessibility */
 a:focus-visible {
   outline: none;
   box-shadow: var(--ring-brand-shadow);
@@ -410,8 +429,21 @@ a:focus-visible {
 }
 
 @keyframes coinShimmer {
-  0% { transform: translate3d(-140%, 0, 0) rotate(18deg); opacity: 0; }
-  12% { opacity: 0.9; }
-  88% { opacity: 0.9; }
-  100% { transform: translate3d(140%, 0, 0) rotate(18deg); opacity: 0; }
+  0% {
+    transform: translate3d(-140%, 0, 0) rotate(18deg);
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 0.9;
+  }
+
+  88% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translate3d(140%, 0, 0) rotate(18deg);
+    opacity: 0;
+  }
 }

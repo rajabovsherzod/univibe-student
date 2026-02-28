@@ -206,8 +206,13 @@ function InfoCard({
 }) {
   return (
     <div className="flex items-center gap-3 p-4 bg-bg-secondary rounded-xl border border-border-secondary shadow-sm">
-      <div className="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-950 flex items-center justify-center">
-        <Icon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+      <div className="
+        w-10 h-10 rounded-xl flex items-center justify-center
+        bg-gradient-to-br from-brand-500 to-brand-600
+        dark:from-brand-400 dark:to-brand-500
+        shadow-md shadow-brand-500/25
+      ">
+        <Icon className="w-5 h-5 text-white" />
       </div>
       <div className="min-w-0">
         <p className="text-sm text-fg-tertiary">{label}</p>

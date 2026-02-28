@@ -38,47 +38,64 @@ export function SectionHeader({
 
   return (
     <div className="flex items-center justify-between mb-5">
-      <h2 className="text-lg font-semibold text-fg-primary flex items-center gap-3">
-        {/* Premium icon wrapper */}
+      <div className="flex items-center gap-3">
+        {/* Premium glassmorphism icon wrapper */}
         {IconComponent && (
-          <span className="
-            flex items-center justify-center w-9 h-9 rounded-xl
-            bg-gradient-to-br from-brand-50 to-brand-100
-            dark:from-brand-950 dark:to-brand-900
-            border border-brand-200/50 dark:border-brand-800/50
-            shadow-sm
-          ">
-            <IconComponent
-              size={18}
-              weight="fill"
-              className="text-brand-600 dark:text-brand-400"
-            />
-          </span>
+          <div className="relative">
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-brand-500/20 dark:bg-brand-400/20 rounded-xl blur-md" />
+
+            {/* Icon container */}
+            <span className="
+              relative flex items-center justify-center w-10 h-10 rounded-xl
+              bg-gradient-to-br from-brand-500 to-brand-600
+              dark:from-brand-400 dark:to-brand-500
+              shadow-lg shadow-brand-500/30
+            ">
+              <IconComponent
+                size={20}
+                weight="fill"
+                className="text-white"
+              />
+            </span>
+          </div>
         )}
-        {title}
-      </h2>
+
+        {/* Title with subtle gradient */}
+        <h2 className="text-lg font-bold text-fg-primary">
+          {title}
+        </h2>
+      </div>
 
       {/* View All Link or Custom Children */}
       {viewAllHref ? (
         <Link
           href={viewAllHref}
           className="
-            text-sm font-medium text-brand-600 dark:text-brand-400
-            flex items-center gap-1.5
-            px-3 py-1.5 rounded-lg
-            hover:bg-brand-50 dark:hover:bg-brand-950
+            group flex items-center gap-1.5 text-sm font-semibold
+            text-brand-600 dark:text-brand-400
+            px-4 py-2 rounded-full
+            bg-brand-50 dark:bg-brand-950
+            border border-brand-200 dark:border-brand-800
+            hover:bg-brand-100 dark:hover:bg-brand-900
+            hover:border-brand-300 dark:hover:border-brand-700
+            shadow-sm
             transition-all duration-200
           "
         >
           {viewAllText}
-          <ArrowRight size={14} weight="bold" />
+          <ArrowRight
+            size={14}
+            weight="bold"
+            className="group-hover:translate-x-0.5 transition-transform"
+          />
         </Link>
       ) : children}
     </div>
   );
 }
 
-// Smaller variant for inside cards
+// Smaller variant for inside cards - also premium
 interface SectionTitleProps {
   title: string;
   iconName?: IconName;
@@ -89,17 +106,18 @@ export function SectionTitle({ title, iconName, className = '' }: SectionTitlePr
   const IconComponent = iconName ? iconMap[iconName] : null;
 
   return (
-    <h2 className={`text-lg font-semibold text-fg-primary mb-4 flex items-center gap-2 ${className}`}>
+    <h2 className={`text-lg font-bold text-fg-primary mb-4 flex items-center gap-2.5 ${className}`}>
       {IconComponent && (
         <span className="
-          flex items-center justify-center w-7 h-7 rounded-lg
-          bg-brand-50 dark:bg-brand-950
-          border border-brand-100 dark:border-brand-900
+          flex items-center justify-center w-8 h-8 rounded-lg
+          bg-gradient-to-br from-brand-500 to-brand-600
+          dark:from-brand-400 dark:to-brand-500
+          shadow-md shadow-brand-500/25
         ">
           <IconComponent
-            size={14}
+            size={16}
             weight="fill"
-            className="text-brand-600 dark:text-brand-400"
+            className="text-white"
           />
         </span>
       )}
