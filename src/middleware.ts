@@ -42,8 +42,12 @@ export default withAuth(
   },
   {
     callbacks: {
-      // Only run middleware on authenticated requests; unauthenticated → signIn page
-      authorized: ({ token }) => !!token,
+      // Unauthenticated or expired refresh token → redirect to signIn page
+      authorized: ({ token }) => {
+        if (!token) return false;
+        if (token.error === "RefreshAccessTokenError") return false;
+        return true;
+      },
     },
   }
 );

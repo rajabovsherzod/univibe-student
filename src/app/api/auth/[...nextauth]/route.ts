@@ -1,10 +1,13 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+// ── Type augmentation ─────────────────────────────────────────────────────
+
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
     refreshToken?: string;
+    error?: string;
     user: {
       name?: string | null;
       email?: string | null;
@@ -24,8 +27,36 @@ declare module "next-auth/jwt" {
     role?: string;
     universityId?: string;
     studentStatus?: string;
+    expiresAt?: number;       // ms timestamp when access token expires
+    error?: string;
   }
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz";
+const ACCESS_TOKEN_LIFETIME_MS = 23 * 60 * 60 * 1000; // 23 h (buffer before 24 h expiry)
+
+async function refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: number } | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/user/auth/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.access) return null;
+    return {
+      accessToken: data.access as string,
+      expiresAt: Date.now() + ACCESS_TOKEN_LIFETIME_MS,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── Auth options ───────────────────────────────────────────────────────────
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -60,13 +91,9 @@ export const authOptions: NextAuthOptions = {
 
         // Standard email+password login
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz";
-          const res = await fetch(`${baseUrl}/api/v1/user/auth/login/`, {
+          const res = await fetch(`${BASE_URL}/api/v1/user/auth/login/`, {
             method: "POST",
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
+            body: JSON.stringify({ email: credentials.email, password: credentials.password }),
             headers: { "Content-Type": "application/json" },
           });
 
@@ -90,31 +117,57 @@ export const authOptions: NextAuthOptions = {
             };
           }
           return null;
-        } catch (error: any) {
-          throw new Error(error?.message || "Tarmoq xatosi");
+        } catch (error: unknown) {
+          throw new Error((error as Error)?.message || "Tarmoq xatosi");
         }
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       // Handle session.update() calls from the client
       if (trigger === "update" && session?.studentStatus !== undefined) {
         token.studentStatus = session.studentStatus;
       }
+
+      // Initial sign in — populate token from user object
       if (user) {
-        token.accessToken = (user as any).accessToken;
-        token.refreshToken = (user as any).refreshToken;
-        token.fullName = (user as any).fullName;
-        token.role = (user as any).role;
-        token.universityId = (user as any).universityId;
-        token.studentStatus = (user as any).studentStatus;
+        const u = user as any;
+        return {
+          ...token,
+          accessToken: u.accessToken,
+          refreshToken: u.refreshToken,
+          fullName: u.fullName,
+          role: u.role,
+          universityId: u.universityId,
+          studentStatus: u.studentStatus,
+          expiresAt: Date.now() + ACCESS_TOKEN_LIFETIME_MS,
+          error: undefined,
+        };
       }
-      return token;
+
+      // Token still valid — return as-is
+      if (token.expiresAt && Date.now() < token.expiresAt) {
+        return token;
+      }
+
+      // Access token expired — attempt server-side refresh
+      if (token.refreshToken) {
+        const refreshed = await refreshAccessToken(token.refreshToken);
+        if (refreshed) {
+          return { ...token, ...refreshed, error: undefined };
+        }
+      }
+
+      // Refresh failed — mark session as expired; middleware will redirect to login
+      return { ...token, error: "RefreshAccessTokenError" };
     },
+
     async session({ session, token }) {
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
+      session.error = token.error;
       if (session.user) {
         session.user.name = token.fullName as string;
         session.user.universityId = token.universityId as string;
@@ -124,7 +177,12 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+
+  session: {
+    strategy: "jwt",
+    maxAge: 10 * 24 * 60 * 60, // 10 days — matches refresh token lifetime
+  },
+
   pages: {
     signIn: "/login",
     error: "/login",

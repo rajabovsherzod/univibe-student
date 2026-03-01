@@ -11,14 +11,17 @@ declare module "next-auth" {
 
 const axiosInstance = axios.create({
   baseURL: API_CONFIG.baseURL,
+  timeout: 30_000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
+// Mutex: prevents parallel refresh calls when multiple requests get 401 simultaneously
+let refreshPromise: Promise<string | null> | null = null;
+
 axiosInstance.interceptors.request.use(
   async (config) => {
-    // For client-side rendering
     if (typeof window !== "undefined") {
       const session = await getSession();
       if (session?.accessToken) {
@@ -39,32 +42,38 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const session = await getSession();
+        // If a refresh is already in progress, wait for it instead of starting a new one
+        if (!refreshPromise) {
+          refreshPromise = (async () => {
+            const session = await getSession();
+            if (!session?.refreshToken) return null;
 
-        if (session?.refreshToken) {
-          const response = await axios.post(
-            `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.refresh}`,
-            { refresh: session.refreshToken }
-          );
-
-          if (response.data.access) {
-            // Re-fire original request attached with fresh token
-            originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
-            return axiosInstance(originalRequest);
-          }
+            const response = await axios.post(
+              `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.refresh}`,
+              { refresh: session.refreshToken }
+            );
+            return response.data.access as string | null;
+          })().finally(() => {
+            refreshPromise = null; // Clear mutex after completion
+          });
         }
-      } catch (refreshError) {
+
+        const newAccessToken = await refreshPromise;
+
+        if (newAccessToken) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return axiosInstance(originalRequest);
+        }
+      } catch {
+        // Refresh failed — force logout
         if (typeof window !== "undefined") {
-          document.cookie = 'user_data=;path=/;max-age=0;SameSite=Lax';
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('univibe-profile');
-            localStorage.removeItem('user-storage');
-            localStorage.removeItem('user-profile-storage');
-            sessionStorage.clear();
-          }
+          document.cookie = "user_data=;path=/;max-age=0;SameSite=Lax";
+          localStorage.removeItem("univibe-profile");
+          localStorage.removeItem("user-storage");
+          localStorage.removeItem("user-profile-storage");
+          sessionStorage.clear();
           signOut({ callbackUrl: `${window.location.origin}/login` });
         }
-        return Promise.reject(refreshError);
       }
     }
 
