@@ -32,5 +32,9 @@ export function sortCx<T extends Record<string, string | number | Record<string,
  */
 export function toHttps(url: string | null | undefined): string | undefined {
     if (!url) return undefined;
-    return `/api/image?url=${encodeURIComponent(url)}`;
+    const proxy = `/api/image?url=${encodeURIComponent(url)}`;
+    if (typeof window !== "undefined") {
+        console.log("[toHttps] raw:", url, "→ proxy:", proxy);
+    }
+    return proxy;
 }
