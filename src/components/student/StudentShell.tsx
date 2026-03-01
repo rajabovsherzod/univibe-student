@@ -184,7 +184,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 <div className="flex items-center gap-3">
                   <div className="relative w-10 h-10 rounded-full shrink-0 overflow-hidden ring-2 ring-border-secondary">
                     {displayPhoto ? (
-                      <Image src={displayPhoto} alt={displayName} fill className="object-cover" />
+                      <Image src={displayPhoto} alt={displayName} fill className="object-cover" unoptimized />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-brand-600 text-white font-bold text-sm">
                         {initial}

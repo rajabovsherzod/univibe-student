@@ -23,8 +23,32 @@ export function sortCx<T extends Record<string, string | number | Record<string,
     return classes;
 }
 
-/** Normalize backend image URLs: replace http:// → https:// to prevent mixed-content blocking on HTTPS (Vercel). */
+/**
+ * Normalize backend image URLs for production (Vercel HTTPS).
+ * Handles all Django media URL formats:
+ *   - "https://..."            → keep as-is
+ *   - "http://public-host/..." → upgrade to https://
+ *   - "http://localhost:.../..." → replace with API_BASE + path
+ *   - "/media/..."             → prepend API_BASE
+ */
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz").replace(/\/$/, "");
+
 export function toHttps(url: string | null | undefined): string | undefined {
     if (!url) return undefined;
-    return url.startsWith("http://") ? "https://" + url.slice(7) : url;
+    if (url.startsWith("https://")) return url;
+    if (url.startsWith("/")) return `${API_BASE}${url}`;
+    if (url.startsWith("http://")) {
+        try {
+            const { hostname, pathname, search } = new URL(url);
+            const isInternal =
+                hostname === "localhost" ||
+                /^127\./.test(hostname) ||
+                /^10\./.test(hostname) ||
+                /^192\.168\./.test(hostname) ||
+                /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+            if (isInternal) return `${API_BASE}${pathname}${search}`;
+        } catch { /* fall through */ }
+        return "https://" + url.slice(7);
+    }
+    return url;
 }
