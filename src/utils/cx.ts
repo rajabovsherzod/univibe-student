@@ -24,31 +24,13 @@ export function sortCx<T extends Record<string, string | number | Record<string,
 }
 
 /**
- * Normalize backend image URLs for production (Vercel HTTPS).
- * Handles all Django media URL formats:
- *   - "https://..."            → keep as-is
- *   - "http://public-host/..." → upgrade to https://
- *   - "http://localhost:.../..." → replace with API_BASE + path
- *   - "/media/..."             → prepend API_BASE
+ * Proxy backend image URLs through /api/image route.
+ * This solves all production issues:
+ *   - Mixed content (http vs https)
+ *   - Backend not directly accessible from browser
+ *   - Any Django media URL format (absolute, relative, http, localhost)
  */
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz").replace(/\/$/, "");
-
 export function toHttps(url: string | null | undefined): string | undefined {
     if (!url) return undefined;
-    if (url.startsWith("https://")) return url;
-    if (url.startsWith("/")) return `${API_BASE}${url}`;
-    if (url.startsWith("http://")) {
-        try {
-            const { hostname, pathname, search } = new URL(url);
-            const isInternal =
-                hostname === "localhost" ||
-                /^127\./.test(hostname) ||
-                /^10\./.test(hostname) ||
-                /^192\.168\./.test(hostname) ||
-                /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
-            if (isInternal) return `${API_BASE}${pathname}${search}`;
-        } catch { /* fall through */ }
-        return "https://" + url.slice(7);
-    }
-    return url;
+    return `/api/image?url=${encodeURIComponent(url)}`;
 }
