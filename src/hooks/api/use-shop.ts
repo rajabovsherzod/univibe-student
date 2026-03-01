@@ -42,7 +42,6 @@ export const useShopProducts = (params: ShopProductListParams = {}) => {
     queryKey: ["shop-products", params],
     queryFn: async () => {
       const { data } = await axiosInstance.get(url);
-      console.log("[Shop API Response]", data);
       // Handle both flat array and paginated {results: []} response
       if (Array.isArray(data)) return data;
       if (data?.results && Array.isArray(data.results)) return data.results;

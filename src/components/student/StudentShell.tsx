@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
+import { toast } from 'sonner';
 import {
   HouseIcon,
   CalendarBlankIcon,
@@ -25,7 +26,7 @@ import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { useTranslation } from '@/lib/i18n/i18n';
 import { useProfileStore } from '@/store/profile-store';
-import { useInitialUser, useTgBannerDismissed } from '@/providers/app-provider';
+import { useInitialUser } from '@/providers/app-provider';
 import { TelegramBanner } from '@/components/student/TelegramBanner';
 
 interface NavItem {
@@ -44,7 +45,7 @@ const mainNavItems: NavConfigItem[] = [
   { href: '/shop', labelKey: 'nav.shop', icon: StorefrontIcon },
   { divider: true },
   { href: '/my-events', labelKey: 'nav.myEvents', icon: CalendarCheckIcon },
-  { href: '/wallet', labelKey: 'nav.wallet', icon: WalletIcon },
+  { href: '/balance', labelKey: 'nav.balance', icon: WalletIcon },
   { divider: true },
   { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
 ];
@@ -60,7 +61,7 @@ const mobileNavItems: NavItem[] = [
 function StatusBadge({ status, t }: { status: 'waited' | 'approved' | 'rejected'; t: (key: string) => string }) {
   if (status === 'approved') return null;
   if (status === 'waited') return (
-    <div className="mx-2 flex items-center gap-1.5 rounded-lg bg-warning-50 dark:bg-warning-600/10 border border-warning-200 dark:border-warning-600/30 px-3 py-2 text-xs font-medium text-warning-700 dark:text-warning-500">
+    <div className="mx-2 flex items-center gap-1.5 rounded-lg bg-brand-50 dark:bg-brand-600/10 border border-brand-200 dark:border-brand-600/30 px-3 py-2 text-xs font-medium text-brand-700 dark:text-brand-500">
       <ClockIcon size={12} weight="fill" className="shrink-0" />
       <span>{t('profile.statusWaited')}</span>
     </div>
@@ -77,10 +78,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useTranslation();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const { data: profile, isError: profileError } = useStudentMe();
   const [isDark, setIsDark] = useState(false);
-  const tgBannerDismissed = useTgBannerDismissed();
 
   // ── Zustand store: cache profile data for instant sidebar rendering
   const { profile: cachedProfile, setProfile: setCachedProfile } = useProfileStore();
@@ -116,13 +116,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     }
   }, [profile, setCachedProfile]);
 
-  // ── Status gating
+  // ── Sync session status if backend status differs from JWT token
   useEffect(() => {
-    if (profile?.status === 'waited') router.push('/waiting');
-  }, [profile, router]);
-  useEffect(() => {
-    if (profileError) router.push('/personal-info');
-  }, [profileError, router]);
+    if (profile && session?.user?.studentStatus && session.user.studentStatus !== profile.status) {
+      updateSession({ studentStatus: profile.status }).catch(() => { });
+    }
+  }, [profile, session, updateSession]);
 
   // useLayoutEffect for theme → reads dark-mode class BEFORE paint (no flash)
   useLayoutEffect(() => {
@@ -146,7 +145,8 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const profileName = (cachedProfile?.name || cachedProfile?.surname)
     ? `${cachedProfile?.name || ''} ${cachedProfile?.surname || ''}`.trim()
     : undefined;
-  const displayName = profileName || initialUser?.name || session?.user?.name || '\u00A0';
+  const rawDisplayName = profileName || initialUser?.name || session?.user?.name || '\u00A0';
+  const displayName = rawDisplayName.replace(/\bUser\b/ig, '').trim() || '\u00A0';
   const displayEmail = cachedProfile?.email || initialUser?.email || session?.user?.email || '\u00A0';
   const displayPhoto = cachedProfile?.profile_photo || initialUser?.photo || undefined;
   const displayStatus = (cachedProfile?.status || profile?.status) as 'waited' | 'approved' | 'rejected' | undefined;
@@ -168,27 +168,39 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          {/* User Card — instant from zustand store, no skeleton */}
-          <div className="mx-2 rounded-xl bg-bg-primary border border-border-secondary p-3.5">
-            <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-full shrink-0 overflow-hidden ring-2 ring-border-secondary">
-                {displayPhoto ? (
-                  <Image src={displayPhoto} alt={displayName} fill className="object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-brand-600 text-white font-bold text-sm">
-                    {initial}
+          {/* User Card */}
+          <div className="mx-2 rounded-xl bg-bg-primary border border-border-secondary p-3.5 min-h-[68px]">
+            {(!displayName || displayName === '\u00A0') ? (
+              <div className="flex items-center gap-3 animate-pulse-fast">
+                <div className="w-10 h-10 rounded-full bg-bg-secondary border border-border-secondary skeleton-shimmer shrink-0" />
+                <div className="flex-1 space-y-2.5">
+                  <div className="h-2.5 w-3/4 rounded bg-bg-secondary border border-border-secondary skeleton-shimmer" />
+                  <div className="h-2 w-full rounded bg-bg-secondary border border-border-secondary skeleton-shimmer" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-10 h-10 rounded-full shrink-0 overflow-hidden ring-2 ring-border-secondary">
+                    {displayPhoto ? (
+                      <Image src={displayPhoto} alt={displayName} fill className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-brand-600 text-white font-bold text-sm">
+                        {initial}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-fg-primary truncate text-sm">{displayName}</p>
+                    <p className="text-xs text-fg-tertiary truncate">{displayEmail}</p>
+                  </div>
+                </div>
+                {displayStatus && displayStatus !== 'approved' && (
+                  <div className="mt-2.5">
+                    <StatusBadge status={displayStatus} t={t} />
                   </div>
                 )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-fg-primary truncate text-sm">{displayName}</p>
-                <p className="text-xs text-fg-tertiary truncate">{displayEmail}</p>
-              </div>
-            </div>
-            {displayStatus && displayStatus !== 'approved' && (
-              <div className="mt-2.5">
-                <StatusBadge status={displayStatus} t={t} />
-              </div>
+              </>
             )}
           </div>
 
@@ -201,6 +213,26 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 }
                 const Icon = item.icon;
                 const active = isActive(item.href);
+
+                // Lockout condition
+                const isLocked = (!displayStatus || displayStatus !== 'approved') && item.href !== '/personal-info';
+
+                if (isLocked) {
+                  return (
+                    <li key={item.href}>
+                      <button
+                        onClick={() => toast.warning(t('personalInfo.fillFirstMessage') || "Iltimos, avval shaxsiy ma'lumotlaringizni to'ldiring!")}
+                        className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 opacity-50 cursor-not-allowed text-fg-secondary"
+                      >
+                        <span className="shrink-0 text-fg-tertiary">
+                          <Icon size={20} weight="regular" />
+                        </span>
+                        <span className="flex-1 text-left">{t(item.labelKey)}</span>
+                      </button>
+                    </li>
+                  );
+                }
+
                 return (
                   <li key={item.href}>
                     <Link
@@ -232,10 +264,13 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </button>
             <button
               onClick={() => {
-                // Clear cookies on logout so they reset on next login
-                document.cookie = 'tg_banner_dismissed=;path=/;max-age=0';
-                document.cookie = 'user_data=;path=/;max-age=0';
-                signOut({ callbackUrl: '/login' });
+                // Fully clear auth storage on logout to prevent state leaking
+                document.cookie = 'user_data=;path=/;max-age=0;SameSite=Lax';
+                localStorage.removeItem('univibe-profile');
+                localStorage.removeItem('user-storage');
+                localStorage.removeItem('user-profile-storage');
+                sessionStorage.clear();
+                signOut({ callbackUrl: `${window.location.origin}/login` });
               }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-error-600 dark:text-error-500 hover:bg-error-50 dark:hover:bg-error-600/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500"
             >
@@ -285,7 +320,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main className="lg:pl-[280px] lg:pt-14 pb-20 lg:pb-0">
         <div className="pt-4">
-          <TelegramBanner initialDismissed={tgBannerDismissed} />
+          <TelegramBanner />
         </div>
         <div className="px-4 py-2 sm:px-6 lg:px-8">
           {children}
@@ -298,18 +333,30 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const isLocked = (!displayStatus || displayStatus !== 'approved') && item.href !== '/personal-info';
+
+            if (isLocked) {
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => toast.warning(t('personalInfo.fillFirstMessage') || "Iltimos, avval shaxsiy ma'lumotlaringizni to'ldiring!")}
+                  className="flex flex-col items-center justify-center w-16 h-full gap-1 opacity-50 cursor-not-allowed text-fg-quaternary"
+                >
+                  <Icon size={22} weight="regular" />
+                  <span className="text-[10px] font-medium max-w-[64px] truncate">{t(item.labelKey)}</span>
+                </button>
+              );
+            }
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-150 min-w-[56px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${active ? 'text-brand-600 dark:text-brand-400' : 'text-fg-tertiary hover:text-fg-secondary'
+                className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${active ? 'text-brand-600' : 'text-fg-quaternary hover:text-fg-secondary'
                   }`}
               >
-                <span className={`transition-transform ${active ? 'scale-110' : ''}`}>
-                  <Icon size={22} weight={active ? 'fill' : 'regular'} />
-                </span>
-                <span className="text-[10px] font-medium">{t(item.labelKey)}</span>
-                {active && <div className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-brand-600 dark:bg-brand-400" />}
+                <Icon size={22} weight={active ? 'fill' : 'regular'} />
+                <span className="text-[10px] font-medium max-w-[64px] truncate">{t(item.labelKey)}</span>
               </Link>
             );
           })}

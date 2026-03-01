@@ -145,9 +145,6 @@ export default async function RootLayout({
     try { initialUser = JSON.parse(decodeURIComponent(userCookie)); } catch { }
   }
 
-  // Telegram banner dismissed state
-  const tgDismissed = cookieStore.get('tg_banner_dismissed')?.value === 'true';
-
   // Server sets the correct class → browser paints correct theme immediately
   const themeClass = themeCookie === 'dark' ? 'dark-mode' : 'light-mode';
 
@@ -179,7 +176,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.variable} antialiased`}>
-        <AppProvider initialLocale={localeCookie} initialUser={initialUser} tgBannerDismissed={tgDismissed}>
+        <AppProvider initialLocale={localeCookie} initialUser={initialUser}>
           {children}
           <ThemeToaster />
         </AppProvider>

@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, ArrowLeft, Mail01 } from "@untitledui/icons";
+import { ArrowRight, ArrowLeft, Mail01, CheckCircle } from "@untitledui/icons";
+import { signIn } from "next-auth/react";
 
 import { Input } from "@/components/base/input/input";
 import { Button } from "@/components/base/buttons/button";
@@ -44,6 +45,9 @@ export default function SignupPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
+  const [step3, setStep3] = useState(false);
+  const [savedPassword, setSavedPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [otpStatus, setOtpStatus] = useState<OtpStatus>("idle");
   const [countdown, setCountdown] = useState(0);
 
@@ -119,14 +123,49 @@ export default function SignupPage() {
         surname: formData.surname, university: formData.university, password,
       });
       setOtpStatus("success");
-      toast.success(t("common.success"));
+      setSavedPassword(password);
       sessionStorage.removeItem("signupData");
       sessionStorage.removeItem("signupPassword");
-      await new Promise((r) => setTimeout(r, 600));
-      router.push("/personal-info");
+      await new Promise((r) => setTimeout(r, 400));
+      setStep3(true);
     } catch (e: any) {
       setOtpStatus("error");
       toast.error(t("common.error"), { description: extractApiError(e) });
+    }
+  };
+
+  // ── Step 3: Login after signup
+  const handleLoginAfterSignup = async () => {
+    setIsLoggingIn(true);
+    const email = signupForm.getValues("email");
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz";
+      const res = await fetch(`${baseUrl}/api/v1/user/auth/login/`, {
+        method: "POST",
+        body: JSON.stringify({ email, password: savedPassword }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Login xatosi yuz berdi");
+      const data = await res.json();
+      const { student_status, access_token, refresh_token, full_name, role, university_id } = data;
+      if (student_status) {
+        localStorage.setItem("univibe-student-status", student_status);
+      }
+      await signIn("credentials", {
+        redirect: false,
+        access_token,
+        refresh_token,
+        email,
+        full_name: full_name || "",
+        role: role || "STUDENT",
+        university_id: university_id || "",
+        student_status: student_status || "",
+      });
+      // Middleware will redirect to the correct page based on student_status in the JWT
+      router.push("/");
+    } catch (e: any) {
+      toast.error("Tizimga kirish xatosi", { description: e.message || "Qayta urinib ko'ring" });
+      setIsLoggingIn(false);
     }
   };
 
@@ -162,7 +201,7 @@ export default function SignupPage() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-[440px]">
+      <div className="relative z-10 w-full max-w-[560px]">
 
         {/* Header */}
         <div className="flex flex-col items-center gap-3 mb-6">
@@ -172,60 +211,106 @@ export default function SignupPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-primary">{t("auth.signup")}</h1>
             <p className="mt-1 text-sm text-tertiary">
-              {step === 1 ? t("auth.signupSubtitle") : `${signupForm.getValues("email")} ${t("auth.otpSent")}`}
+              {step3
+                ? "Email manzilingiz muvaffaqiyatli tasdiqlandi"
+                : step === 1 ? t("auth.signupSubtitle") : `${signupForm.getValues("email")} ${t("auth.otpSent")}`}
             </p>
           </div>
         </div>
 
         {/* Progress */}
-        <div className="mb-5">
-          <div className="flex gap-1.5 mb-2">
-            {[1, 2].map((s) => (
-              <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= s ? "bg-brand-solid" : "bg-border-secondary"}`} />
-            ))}
+        {!step3 && (
+          <div className="mb-5">
+            <div className="flex gap-1.5 mb-2">
+              {[1, 2].map((s) => (
+                <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= s ? "bg-brand-solid" : "bg-border-secondary"}`} />
+              ))}
+            </div>
+            <p className="text-xs font-medium text-tertiary">
+              {t("auth.step")} {step} / 2 — {step === 1 ? t("auth.stepInfo") : t("auth.stepVerify")}
+            </p>
           </div>
-          <p className="text-xs font-medium text-tertiary">
-            {t("auth.step")} {step} / 2 — {step === 1 ? t("auth.stepInfo") : t("auth.stepVerify")}
-          </p>
-        </div>
+        )}
 
         {/* Card */}
         <div className="rounded-2xl bg-bg-secondary border border-border-secondary shadow-sm p-7">
           <AnimatePresence mode="wait">
 
-            {/* ── STEP 1 ── */}
-            {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <form onSubmit={signupForm.handleSubmit(onFormSubmit)} className="flex flex-col gap-4">
-                  <Controller name="name" control={signupForm.control} render={({ field }) => (
-                    <Input {...field} label={t("auth.name")} placeholder={t("auth.namePlaceholder")} isInvalid={!!signupForm.formState.errors.name} hint={signupForm.formState.errors.name?.message} isDisabled={sendOtp.isPending} />
-                  )} />
-                  <Controller name="surname" control={signupForm.control} render={({ field }) => (
-                    <Input {...field} label={t("auth.surname")} placeholder={t("auth.surnamePlaceholder")} isInvalid={!!signupForm.formState.errors.surname} hint={signupForm.formState.errors.surname?.message} isDisabled={sendOtp.isPending} />
-                  )} />
-                  <Controller name="university" control={signupForm.control} render={({ field }) => (
-                    <Select label={t("auth.university")} placeholder={t("auth.universityPlaceholder")} items={universityItems} selectedKey={field.value || null} onSelectionChange={(key) => field.onChange(String(key))} isDisabled={isLoadingUniversities || sendOtp.isPending} isInvalid={!!signupForm.formState.errors.university} hint={signupForm.formState.errors.university?.message}>
-                      {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
-                    </Select>
-                  )} />
-                  <Controller name="email" control={signupForm.control} render={({ field }) => (
-                    <Input {...field} label={t("auth.email")} placeholder={t("auth.emailPlaceholder")} type="email" isInvalid={!!signupForm.formState.errors.email} hint={signupForm.formState.errors.email?.message} isDisabled={sendOtp.isPending} />
-                  )} />
-                  <Controller name="password" control={signupForm.control} render={({ field }) => (
-                    <Input {...field} label={t("auth.password")} placeholder={t("auth.passwordMin")} type="password" isInvalid={!!signupForm.formState.errors.password} hint={signupForm.formState.errors.password?.message} isDisabled={sendOtp.isPending} />
-                  )} />
-                  <Controller name="confirmPassword" control={signupForm.control} render={({ field }) => (
-                    <Input {...field} label={t("auth.confirmPassword")} placeholder={t("auth.confirmPasswordPlaceholder")} type="password" isInvalid={!!signupForm.formState.errors.confirmPassword} hint={signupForm.formState.errors.confirmPassword?.message} isDisabled={sendOtp.isPending} />
-                  )} />
-                  <Button type="submit" className="w-full mt-2" size="xl" iconTrailing={ArrowRight} isLoading={sendOtp.isPending} isDisabled={sendOtp.isPending}>
-                    {t("auth.continue")}
+            {/* ── STEP 3: Success ── */}
+            {step3 && (
+              <motion.div key="step3" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.25 }}>
+                <div className="flex flex-col items-center gap-5 py-4">
+                  <div className="flex size-16 items-center justify-center rounded-full bg-success-50 dark:bg-success-500/10 border-[6px] border-success-100 dark:border-success-500/20">
+                    <CheckCircle className="size-8 text-success-600 dark:text-success-400" />
+                  </div>
+                  <div className="text-center">
+                    <h2 className="text-lg font-bold text-primary mb-1">Email tasdiqlandi!</h2>
+                    <p className="text-sm text-tertiary max-w-xs">
+                      Hisobingiz muvaffaqiyatli yaratildi. Tizimga kirish uchun quyidagi tugmani bosing.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    size="xl"
+                    iconTrailing={ArrowRight}
+                    isLoading={isLoggingIn}
+                    isDisabled={isLoggingIn}
+                    onClick={handleLoginAfterSignup}
+                  >
+                    Tizimga kirish
                   </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── STEP 1 ── */}
+            {step === 1 && !step3 && (
+              <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+                <form onSubmit={signupForm.handleSubmit(onFormSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-1">
+                    <Controller name="name" control={signupForm.control} render={({ field }) => (
+                      <Input {...field} label={t("auth.name")} placeholder={t("auth.namePlaceholder")} isInvalid={!!signupForm.formState.errors.name} hint={signupForm.formState.errors.name?.message} isDisabled={sendOtp.isPending} />
+                    )} />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Controller name="surname" control={signupForm.control} render={({ field }) => (
+                      <Input {...field} label={t("auth.surname")} placeholder={t("auth.surnamePlaceholder")} isInvalid={!!signupForm.formState.errors.surname} hint={signupForm.formState.errors.surname?.message} isDisabled={sendOtp.isPending} />
+                    )} />
+                  </div>
+                  <div className="col-span-1 sm:col-span-2">
+                    <Controller name="university" control={signupForm.control} render={({ field }) => (
+                      <Select label={t("auth.university")} placeholder={t("auth.universityPlaceholder")} items={universityItems} selectedKey={field.value || null} onSelectionChange={(key) => field.onChange(String(key))} isDisabled={isLoadingUniversities || sendOtp.isPending} isInvalid={!!signupForm.formState.errors.university} hint={signupForm.formState.errors.university?.message}>
+                        {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+                      </Select>
+                    )} />
+                  </div>
+                  <div className="col-span-1 sm:col-span-2">
+                    <Controller name="email" control={signupForm.control} render={({ field }) => (
+                      <Input {...field} label={t("auth.email")} placeholder={t("auth.emailPlaceholder")} type="email" isInvalid={!!signupForm.formState.errors.email} hint={signupForm.formState.errors.email?.message} isDisabled={sendOtp.isPending} />
+                    )} />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Controller name="password" control={signupForm.control} render={({ field }) => (
+                      <Input {...field} label={t("auth.password")} placeholder={t("auth.passwordMin")} type="password" isInvalid={!!signupForm.formState.errors.password} hint={signupForm.formState.errors.password?.message} isDisabled={sendOtp.isPending} />
+                    )} />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Controller name="confirmPassword" control={signupForm.control} render={({ field }) => (
+                      <Input {...field} label={t("auth.confirmPassword")} placeholder={t("auth.confirmPasswordPlaceholder")} type="password" isInvalid={!!signupForm.formState.errors.confirmPassword} hint={signupForm.formState.errors.confirmPassword?.message} isDisabled={sendOtp.isPending} />
+                    )} />
+                  </div>
+                  <div className="col-span-1 sm:col-span-2 mt-2">
+                    <Button type="submit" className="w-full" size="xl" iconTrailing={ArrowRight} isLoading={sendOtp.isPending} isDisabled={sendOtp.isPending}>
+                      {t("auth.continue")}
+                    </Button>
+                  </div>
                 </form>
               </motion.div>
             )}
 
             {/* ── STEP 2: OTP ── */}
-            {step === 2 && (
+            {step === 2 && !step3 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
                 <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="flex flex-col items-center gap-5">
                   <div className="flex size-14 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-500/10 border-[6px] border-brand-100 dark:border-brand-500/20">
@@ -271,7 +356,7 @@ export default function SignupPage() {
         </div>
 
         {/* Footer */}
-        {step === 1 && (
+        {step === 1 && !step3 && (
           <p className="mt-6 text-center text-sm text-tertiary">
             {t("auth.hasAccount")}{" "}
             <Link href="/login" className="font-semibold text-brand-solid hover:text-brand-700 hover:underline transition-colors">{t("auth.loginLink")}</Link>

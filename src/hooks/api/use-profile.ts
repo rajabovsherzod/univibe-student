@@ -65,6 +65,7 @@ export const useStudentMe = () => {
     },
     enabled: status === "authenticated",
     staleTime: 1000 * 60 * 5, // 5 min
+    retry: false, // don't retry — not_found users get 404, avoid cascade of requests
   });
 };
 
@@ -78,7 +79,6 @@ export const useFaculties = (universityId?: string) => {
       const { data } = await axiosInstance.get<Faculty[]>(url);
       return data;
     },
-    enabled: !!universityId,
   });
 };
 
@@ -92,7 +92,6 @@ export const useDegreeLevels = (universityId?: string) => {
       const { data } = await axiosInstance.get<DegreeLevel[]>(url);
       return data;
     },
-    enabled: !!universityId,
   });
 };
 
@@ -106,7 +105,6 @@ export const useYearLevels = (universityId?: string) => {
       const { data } = await axiosInstance.get<YearLevel[]>(url);
       return data;
     },
-    enabled: !!universityId,
   });
 };
 

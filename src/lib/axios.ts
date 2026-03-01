@@ -55,7 +55,14 @@ axiosInstance.interceptors.response.use(
         }
       } catch (refreshError) {
         if (typeof window !== "undefined") {
-          signOut({ callbackUrl: "/login" });
+          document.cookie = 'user_data=;path=/;max-age=0;SameSite=Lax';
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('univibe-profile');
+            localStorage.removeItem('user-storage');
+            localStorage.removeItem('user-profile-storage');
+            sessionStorage.clear();
+          }
+          signOut({ callbackUrl: `${window.location.origin}/login` });
         }
         return Promise.reject(refreshError);
       }

@@ -21,34 +21,23 @@ export function useInitialUser() {
   return useContext(InitialUserContext);
 }
 
-// ── Telegram banner dismissed context ──────────────────────────────────
-const TgBannerContext = createContext<boolean>(false);
-
-export function useTgBannerDismissed() {
-  return useContext(TgBannerContext);
-}
-
 // ── App Provider ───────────────────────────────────────────────────────
 interface AppProviderProps extends PropsWithChildren {
   initialLocale?: Locale;
   initialUser?: InitialUserData;
-  tgBannerDismissed?: boolean;
 }
 
 export const AppProvider = ({
   children,
   initialLocale,
   initialUser,
-  tgBannerDismissed = false,
 }: AppProviderProps) => {
   return (
     <SessionProvider>
       <AppQueryClientProvider>
         <I18nProvider initialLocale={initialLocale}>
           <InitialUserContext.Provider value={initialUser}>
-            <TgBannerContext.Provider value={tgBannerDismissed}>
-              <RouteProvider>{children}</RouteProvider>
-            </TgBannerContext.Provider>
+            <RouteProvider>{children}</RouteProvider>
           </InitialUserContext.Provider>
         </I18nProvider>
       </AppQueryClientProvider>

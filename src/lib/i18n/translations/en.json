@@ -64,6 +64,7 @@
     "degreePlaceholder": "Select degree",
     "year": "Year",
     "yearPlaceholder": "Select year",
+    "photoLabel": "Profile photo (optional)",
     "saveButton": "Save and continue",
     "successTitle": "Application submitted!",
     "successDesc": "Your information has been saved. You will get full access once the university staff approves your profile."
@@ -137,7 +138,19 @@
     "buy": "Buy",
     "outOfStock": "Out of stock",
     "inStock": "In stock",
-    "searchPlaceholder": "Search products..."
+    "searchPlaceholder": "Search products...",
+    "insufficientBalance": "Insufficient balance",
+    "loading": "Loading...",
+    "redeemTitle": "Redeem product",
+    "redeemConfirm": "Exchange",
+    "redeemCancel": "Cancel",
+    "redeemBalance": "Current balance",
+    "redeemAfter": "Remaining balance",
+    "redeemPrice": "Price",
+    "redeemSuccess": "Successfully redeemed!",
+    "redeemError": "An error occurred",
+    "exchange": "Exchange",
+    "stockLeft": "left"
   },
   "nav": {
     "home": "Home",
@@ -146,12 +159,27 @@
     "shop": "Shop",
     "profile": "Profile",
     "myEvents": "My Events",
-    "wallet": "Wallet",
+    "balance": "Balance",
     "notifications": "Notifications"
   },
   "telegram": {
     "bannerTitle": "Connect Telegram",
     "bannerDesc": "Stay updated with the latest news and notifications",
     "connectButton": "Connect Telegram"
+  },
+  "balance": {
+    "title": "Balance",
+    "subtitle": "Your coin balance and transaction history",
+    "currentBalance": "Current balance",
+    "lastTransaction": "Last transaction",
+    "noTransactionsYet": "No transactions yet",
+    "transactionHistory": "Transaction history",
+    "totalCount": "total",
+    "noTransactions": "No transactions",
+    "noTransactionsDesc": "No transactions have been made yet",
+    "coinEarned": "Coins earned",
+    "coinSpent": "Coins spent",
+    "prev": "Previous",
+    "next": "Next"
   }
 }

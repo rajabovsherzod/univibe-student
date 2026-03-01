@@ -33,8 +33,14 @@ export const API_CONFIG = {
       account: "/api/v1/telegram/account/",
       connectLink: "/api/v1/telegram/connect-link/",
     },
+    coins: {
+      balance: "/api/v1/coins/student/balance/",
+      transactions: "/api/v1/coins/student/transactions/",
+    },
     market: {
       products: "/api/v1/market/products/",
+      orders: "/api/v1/market/orders/",
+      orderCreate: "/api/v1/market/orders/create/",
     },
   },
 };

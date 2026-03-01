@@ -64,6 +64,7 @@
     "degreePlaceholder": "Выберите уровень",
     "year": "Курс",
     "yearPlaceholder": "Выберите курс",
+    "photoLabel": "Фото профиля (необязательно)",
     "saveButton": "Сохранить и продолжить",
     "successTitle": "Заявка принята!",
     "successDesc": "Ваши данные сохранены. Полный доступ будет открыт после подтверждения сотрудниками университета."
@@ -137,7 +138,19 @@
     "buy": "Купить",
     "outOfStock": "Нет в наличии",
     "inStock": "В наличии",
-    "searchPlaceholder": "Поиск товаров..."
+    "searchPlaceholder": "Поиск товаров...",
+    "insufficientBalance": "Недостаточно средств",
+    "loading": "Загрузка...",
+    "redeemTitle": "Получить товар",
+    "redeemConfirm": "Обменять",
+    "redeemCancel": "Отмена",
+    "redeemBalance": "Текущий баланс",
+    "redeemAfter": "Остаток",
+    "redeemPrice": "Цена",
+    "redeemSuccess": "Успешно обменяно!",
+    "redeemError": "Произошла ошибка",
+    "exchange": "Обменять",
+    "stockLeft": "шт."
   },
   "nav": {
     "home": "Главная",
@@ -146,12 +159,27 @@
     "shop": "Магазин",
     "profile": "Профиль",
     "myEvents": "Мои мероприятия",
-    "wallet": "Кошелёк",
+    "balance": "Баланс",
     "notifications": "Уведомления"
   },
   "telegram": {
     "bannerTitle": "Подключите Telegram",
     "bannerDesc": "Будьте в курсе новостей и уведомлений",
     "connectButton": "Подключить Telegram"
+  },
+  "balance": {
+    "title": "Баланс",
+    "subtitle": "Ваш баланс монет и история транзакций",
+    "currentBalance": "Текущий баланс",
+    "lastTransaction": "Последняя транзакция",
+    "noTransactionsYet": "Транзакций пока нет",
+    "transactionHistory": "История транзакций",
+    "totalCount": "всего",
+    "noTransactions": "Нет транзакций",
+    "noTransactionsDesc": "Транзакции ещё не были совершены",
+    "coinEarned": "Монеты получены",
+    "coinSpent": "Монеты потрачены",
+    "prev": "Назад",
+    "next": "Далее"
   }
 }

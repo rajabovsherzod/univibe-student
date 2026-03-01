@@ -64,6 +64,7 @@
     "degreePlaceholder": "Darajani tanlang",
     "year": "Kurs",
     "yearPlaceholder": "Kursni tanlang",
+    "photoLabel": "Profil rasmi (ixtiyoriy)",
     "saveButton": "Saqlash va davom etish",
     "successTitle": "Ariza qabul qilindi!",
     "successDesc": "Ma'lumotlaringiz saqlandi. Universitet xodimlari profilingizni tasdiqlangach, tizimdan foydalanishingiz mumkin."
@@ -137,7 +138,19 @@
     "buy": "Sotib olish",
     "outOfStock": "Tugagan",
     "inStock": "Mavjud",
-    "searchPlaceholder": "Mahsulot qidirish..."
+    "searchPlaceholder": "Mahsulot qidirish...",
+    "insufficientBalance": "Balans yetarli emas",
+    "loading": "Yuklanmoqda...",
+    "redeemTitle": "Mahsulotni olish",
+    "redeemConfirm": "Almashtirish",
+    "redeemCancel": "Bekor qilish",
+    "redeemBalance": "Joriy balans",
+    "redeemAfter": "Qolgan balans",
+    "redeemPrice": "Narxi",
+    "redeemSuccess": "Muvaffaqiyatli almashtirildi!",
+    "redeemError": "Xatolik yuz berdi",
+    "exchange": "Almashtirish",
+    "stockLeft": "dona"
   },
   "nav": {
     "home": "Bosh sahifa",
@@ -146,12 +159,27 @@
     "shop": "Do'kon",
     "profile": "Profil",
     "myEvents": "Mening tadbirlarim",
-    "wallet": "Hamyon",
+    "balance": "Balans",
     "notifications": "Bildirishnomalar"
   },
   "telegram": {
     "bannerTitle": "Telegram ulang",
     "bannerDesc": "Yangiliklar va bildirishnomalardan xabardor bo'ling",
     "connectButton": "Telegram ulash"
+  },
+  "balance": {
+    "title": "Balans",
+    "subtitle": "Coin balansingiz va tranzaksiyalar tarixi",
+    "currentBalance": "Joriy balans",
+    "lastTransaction": "Oxirgi tranzaksiya",
+    "noTransactionsYet": "Hali tranzaksiyalar yo'q",
+    "transactionHistory": "Tranzaksiyalar tarixi",
+    "totalCount": "ta jami",
+    "noTransactions": "Tranzaksiyalar yo'q",
+    "noTransactionsDesc": "Hali hech qanday tranzaksiya amalga oshirilmagan",
+    "coinEarned": "Coin berildi",
+    "coinSpent": "Coin sarflandi",
+    "prev": "Oldingi",
+    "next": "Keyingi"
   }
 }

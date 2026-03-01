@@ -679,7 +679,14 @@ function LogoutSection() {
       <ConfirmModal
         isOpen={showLogout}
         onClose={() => setShowLogout(false)}
-        onConfirm={() => signOut({ callbackUrl: '/login' })}
+        onConfirm={() => {
+          document.cookie = 'user_data=;path=/;max-age=0;SameSite=Lax';
+          localStorage.removeItem('univibe-profile');
+          localStorage.removeItem('user-storage');
+          localStorage.removeItem('user-profile-storage');
+          sessionStorage.clear();
+          signOut({ callbackUrl: `${window.location.origin}/login` });
+        }}
         title={t('profile.logoutTitle')}
         description={t('profile.logoutDesc')}
         confirmLabel={t('profile.logoutConfirm')}

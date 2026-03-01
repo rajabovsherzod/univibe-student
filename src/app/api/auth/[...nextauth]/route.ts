@@ -11,6 +11,7 @@ declare module "next-auth" {
       image?: string | null;
       universityId?: string;
       role?: string;
+      studentStatus?: string;
     };
   }
 }
@@ -22,6 +23,7 @@ declare module "next-auth/jwt" {
     fullName?: string;
     role?: string;
     universityId?: string;
+    studentStatus?: string;
   }
 }
 
@@ -37,6 +39,7 @@ export const authOptions: NextAuthOptions = {
         full_name: { label: "Name", type: "text" },
         role: { label: "Role", type: "text" },
         university_id: { label: "University ID", type: "text" },
+        student_status: { label: "Student Status", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials) return null;
@@ -48,9 +51,10 @@ export const authOptions: NextAuthOptions = {
             email: credentials.email,
             accessToken: credentials.access_token,
             refreshToken: credentials.refresh_token,
-            fullName: credentials.full_name || "Talaba",
+            fullName: (credentials.full_name || "").replace(/\bUser\b/gi, "").trim() || "Talaba",
             role: credentials.role || "STUDENT",
             universityId: credentials.university_id || "",
+            studentStatus: credentials.student_status || "",
           };
         }
 
@@ -79,9 +83,10 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               accessToken: user.access_token,
               refreshToken: user.refresh_token,
-              fullName: user.full_name,
+              fullName: (user.full_name || "").replace(/\bUser\b/gi, "").trim() || user.email,
               role: user.role,
               universityId: user.university_id || "",
+              studentStatus: user.student_status || "",
             };
           }
           return null;
@@ -92,13 +97,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Handle session.update() calls from the client
+      if (trigger === "update" && session?.studentStatus !== undefined) {
+        token.studentStatus = session.studentStatus;
+      }
       if (user) {
         token.accessToken = (user as any).accessToken;
         token.refreshToken = (user as any).refreshToken;
         token.fullName = (user as any).fullName;
         token.role = (user as any).role;
         token.universityId = (user as any).universityId;
+        token.studentStatus = (user as any).studentStatus;
       }
       return token;
     },
@@ -109,6 +119,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.fullName as string;
         session.user.universityId = token.universityId as string;
         session.user.role = token.role as string;
+        session.user.studentStatus = token.studentStatus as string;
       }
       return session;
     },

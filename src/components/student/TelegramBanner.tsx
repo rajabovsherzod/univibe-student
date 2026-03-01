@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TelegramLogo, X } from '@phosphor-icons/react';
 import { useTelegramAccount, useTelegramConnectLink } from '@/hooks/api/use-telegram';
 import { useTranslation } from '@/lib/i18n/i18n';
@@ -10,26 +10,38 @@ import { useTranslation } from '@/lib/i18n/i18n';
  * Shows above page content when Telegram is not linked AND banner is not dismissed.
  *
  * State management:
- * - `tg_banner_dismissed` cookie: "true" when dismissed (server reads for zero-flash SSR)
- * - On X click → set cookie → hide banner
- * - On logout → clear cookie (reset to show on next login)
+ * - `sessionStorage` key 'tg_dismissed' — per browser session
+ * - On X click → set sessionStorage → hide banner
+ * - On tab close / logout → sessionStorage clears automatically
+ * - On next login → banner shows again if Telegram still not linked
  */
-export function TelegramBanner({ initialDismissed }: { initialDismissed: boolean }) {
+const SESSION_KEY = 'tg_dismissed';
+
+export function TelegramBanner() {
   const { t } = useTranslation();
-  const [dismissed, setDismissed] = useState(initialDismissed);
+  const [dismissed, setDismissed] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const { data: telegramAccount, isLoading } = useTelegramAccount();
   const telegramNotLinked = telegramAccount === null;
   const { data: connectLink } = useTelegramConnectLink(telegramNotLinked);
 
-  // Don't show if: dismissed, loading, already linked, or no connect link
-  if (dismissed || isLoading || !telegramNotLinked || !connectLink?.connect_link) {
+  // Read sessionStorage after mount (can't read on server)
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      setDismissed(sessionStorage.getItem(SESSION_KEY) === 'true');
+    }
+  }, []);
+
+  // Don't show if: not mounted, dismissed, loading, already linked, or no connect link
+  if (!mounted || dismissed || isLoading || !telegramNotLinked || !connectLink?.connect_link) {
     return null;
   }
 
   const handleDismiss = () => {
     setDismissed(true);
-    document.cookie = 'tg_banner_dismissed=true;path=/;max-age=31536000;SameSite=Lax';
+    sessionStorage.setItem(SESSION_KEY, 'true');
   };
 
   return (

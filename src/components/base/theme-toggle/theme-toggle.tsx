@@ -3,14 +3,23 @@
 import { useEffect, useState } from "react";
 import { Sun, Moon01 } from "@untitledui/icons";
 
+// globals.css: @variant dark (&:where(.dark-mode, .dark-mode *));
+// So we must toggle ".dark-mode" — not ".dark".
+const DARK_CLASS = "dark-mode";
+const LIGHT_CLASS = "light-mode";
+
+function setThemeCookie(value: "dark" | "light") {
+  document.cookie = `theme=${value};path=/;max-age=31536000;SameSite=Lax`;
+}
+
 export function ThemeToggle({ className }: { className?: string }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
+    setIsDark(document.documentElement.classList.contains(DARK_CLASS));
 
     const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains("dark"));
+      setIsDark(document.documentElement.classList.contains(DARK_CLASS));
     });
     observer.observe(document.documentElement, { attributeFilter: ["class"] });
     return () => observer.disconnect();
@@ -19,8 +28,16 @@ export function ThemeToggle({ className }: { className?: string }) {
   const toggle = () => {
     const next = !isDark;
     setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
+    const html = document.documentElement;
+    if (next) {
+      html.classList.add(DARK_CLASS);
+      html.classList.remove(LIGHT_CLASS);
+    } else {
+      html.classList.remove(DARK_CLASS);
+      html.classList.add(LIGHT_CLASS);
+    }
     localStorage.setItem("theme", next ? "dark" : "light");
+    setThemeCookie(next ? "dark" : "light");
   };
 
   return (

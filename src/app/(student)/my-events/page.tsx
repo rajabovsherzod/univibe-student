@@ -1,90 +1,29 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Coin } from '@phosphor-icons/react';
-import { getMyEvents } from '@/lib/api/student';
-import { type Event } from '@/types/student';
-import { EventCard } from '@/components/student/EventCard';
-import { QuickFilters } from '@/components/student/FilterBar';
-import { NoRegisteredEvents } from '@/components/student/EmptyState';
-import { EventCardSkeleton } from '@/components/ui/Skeleton';
-import { PageHeader } from '@/components/student/PageHeader';
-
-const tabOptions = [
-  { value: 'registered', label: 'Registered' },
-  { value: 'attended', label: 'Attended' },
-  { value: 'past', label: 'Past' },
-];
+import { CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr';
+import { FeatureComingSoon } from '@/components/student/FeatureComingSoon';
 
 export default function MyEventsPage() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('registered');
-
-  useEffect(() => {
-    loadEvents();
-  }, [activeTab]);
-
-  const loadEvents = async () => {
-    setLoading(true);
-    try {
-      const data = await getMyEvents(activeTab as 'registered' | 'attended' | 'past');
-      setEvents(data);
-    } catch (error) {
-      console.error('Failed to load events:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 pb-10">
+
       {/* Header */}
-      <PageHeader
-        title="My Events"
-        subtitle="Track your event registrations and attendance"
-        iconName="calendar-check"
+      <div className="relative overflow-hidden rounded-2xl bg-bg-secondary border border-border-secondary shadow-sm p-5 sm:p-6">
+        <div className="absolute -right-4 -top-4 sm:-right-2 sm:-top-2 opacity-[0.06] pointer-events-none select-none">
+          <CalendarCheckIcon size={140} weight="fill" className="text-brand-400 transform rotate-12" />
+        </div>
+        <div className="relative z-10">
+          <h1 className="text-xl sm:text-2xl font-bold text-fg-primary">Mening Tadbirlarim</h1>
+          <p className="text-fg-tertiary text-xs sm:text-sm mt-0.5">
+            Ro&apos;yxatdan o&apos;tgan va qatnashgan tadbirlaringizni kuzating
+          </p>
+        </div>
+      </div>
+
+      <FeatureComingSoon
+        icon={CalendarCheckIcon}
+        title="Mening tadbirlarim tez kunda"
+        description="Sizning tadbirlaringiz va ro'yxatdan o'tishlaringizni ko'rish imkoniyati yaqinda qo'shiladi."
       />
 
-      {/* Tabs */}
-      <QuickFilters
-        options={tabOptions}
-        value={activeTab}
-        onChange={setActiveTab}
-      />
-
-      {/* Loading State */}
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <EventCardSkeleton key={i} />
-          ))}
-        </div>
-      )}
-
-      {/* Events Grid */}
-      {!loading && events.length > 0 && (
-        <div className="space-y-6">
-          {activeTab === 'attended' && (
-            <div className="bg-success-50 dark:bg-success-900/20 rounded-xl border border-success-200 dark:border-success-800 p-4">
-              <p className="text-success-700 dark:text-success-300 text-sm flex items-center gap-2">
-                <Coin className="w-4 h-4" />
-                You've earned coins from these events! Check your wallet for details.
-              </p>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && events.length === 0 && (
-        <NoRegisteredEvents />
-      )}
     </div>
   );
 }
