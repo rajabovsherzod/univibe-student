@@ -7,6 +7,7 @@ import { useLeaderboard, useMyLeaderboardEntry, type LeaderboardItem, type Leade
 import { useFaculties, useYearLevels, useStudentMe } from '@/hooks/api/use-profile';
 import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
 import { CoinPill } from '@/components/student/CoinPill';
+import { toHttps } from '@/utils/cx';
 import { Select } from '@/components/base/select/select';
 import { SelectItem } from '@/components/base/select/select-item';
 import { useTranslation } from '@/lib/i18n/i18n';
@@ -85,7 +86,7 @@ function PodiumCard({ item, position }: { item: LeaderboardItem; position: 1 | 2
       {/* Avatar — clean, no colored borders */}
       <div className="size-12 sm:size-16 lg:size-20 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 mb-1.5">
         {item.profile_photo ? (
-          <Image src={item.profile_photo} alt={name} width={80} height={80} className="size-full object-cover" unoptimized />
+          <Image src={toHttps(item.profile_photo)!} alt={name} width={80} height={80} className="size-full object-cover" unoptimized />
         ) : (
           <div className="size-full flex items-center justify-center text-lg sm:text-xl lg:text-2xl font-bold text-brand-600 dark:text-brand-400">{initial}</div>
         )}
@@ -284,7 +285,7 @@ export default function LeaderboardPage() {
                           <div className="flex items-center gap-2.5">
                             <div className="size-8 sm:size-9 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
                               {item.profile_photo ? (
-                                <Image src={item.profile_photo} alt="" width={36} height={36} className="size-full object-cover" unoptimized />
+                                <Image src={toHttps(item.profile_photo)!} alt="" width={36} height={36} className="size-full object-cover" unoptimized />
                               ) : (
                                 <div className="size-full flex items-center justify-center text-xs font-bold text-brand-600 dark:text-brand-400">{initial}</div>
                               )}
@@ -325,7 +326,7 @@ export default function LeaderboardPage() {
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
               {myEntry.profile_photo ? (
-                <Image src={myEntry.profile_photo} alt="" width={40} height={40} className="size-full object-cover" unoptimized />
+                <Image src={toHttps(myEntry.profile_photo)!} alt="" width={40} height={40} className="size-full object-cover" unoptimized />
               ) : (
                 <div className="size-full flex items-center justify-center text-sm font-bold text-brand-600 dark:text-brand-400">
                   {shortName(myEntry.full_name).charAt(0).toUpperCase()}

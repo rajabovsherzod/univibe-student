@@ -6,6 +6,7 @@ import { X, StorefrontIcon, CoinVerticalIcon, ArrowRight } from '@phosphor-icons
 import { CoinPill } from '@/components/student/CoinPill';
 import { useTranslation } from '@/lib/i18n/i18n';
 import type { ShopProduct } from '@/hooks/api/use-shop';
+import { toHttps } from '@/utils/cx';
 
 interface RedeemModalProps {
   product: ShopProduct | null;
@@ -45,7 +46,7 @@ export function RedeemModal({ product, userBalance, isLoading, onConfirm, onClos
         <div className="relative aspect-[16/10] bg-bg-tertiary overflow-hidden">
           {product.image ? (
             <Image
-              src={product.image}
+              src={toHttps(product.image)!}
               alt={product.name}
               fill
               className="object-cover"

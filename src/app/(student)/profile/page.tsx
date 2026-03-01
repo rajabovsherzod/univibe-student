@@ -25,6 +25,7 @@ import { Select } from '@/components/base/select/select';
 import { SelectItem } from '@/components/base/select/select-item';
 import { DatePicker } from '@/components/application/date-picker/date-picker';
 import { useTranslation } from '@/lib/i18n/i18n';
+import { toHttps } from '@/utils/cx';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -227,7 +228,7 @@ export default function ProfilePage() {
 
   const sc = profile?.status ? STATUS_CFG[profile.status] : null;
   const displayName = profile?.full_name || session?.user?.name || 'Talaba';
-  const avatarSrc = photoPreview || profile?.profile_photo_url;
+  const avatarSrc = photoPreview || toHttps(profile?.profile_photo_url);
   const initial = displayName.charAt(0).toUpperCase();
 
   return (

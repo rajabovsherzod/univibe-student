@@ -21,6 +21,7 @@ import { Button } from "@/components/base/buttons/button";
 import { Select } from "@/components/base/select/select";
 import { DatePicker } from "@/components/application/date-picker/date-picker";
 import { useTranslation } from "@/lib/i18n/i18n";
+import { toHttps } from "@/utils/cx";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface ProfileForm {
@@ -205,7 +206,7 @@ export default function WaitingRoomPage() {
   };
 
   const displayName = profile?.full_name?.replace(/\bUser\b/gi, "").trim() || session?.user?.name || "Talaba";
-  const avatarSrc = photoPreview || profile?.profile_photo_url;
+  const avatarSrc = photoPreview || toHttps(profile?.profile_photo_url);
   const initial = displayName.charAt(0).toUpperCase();
 
   return (

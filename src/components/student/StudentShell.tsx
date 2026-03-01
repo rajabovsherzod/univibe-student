@@ -28,6 +28,7 @@ import { useTranslation } from '@/lib/i18n/i18n';
 import { useProfileStore } from '@/store/profile-store';
 import { useInitialUser } from '@/providers/app-provider';
 import { TelegramBanner } from '@/components/student/TelegramBanner';
+import { toHttps } from '@/utils/cx';
 
 interface NavItem {
   href: string;
@@ -97,7 +98,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         user_name: profile.user_name,
         user_surname: profile.user_surname,
         email: profile.email,
-        profile_photo: profile.profile_photo_url || undefined,
+        profile_photo: toHttps(profile.profile_photo_url),
         university_name: profile.university_name,
         university_public_id: profile.university_public_id,
         faculty_name: profile.faculty_name,
@@ -110,7 +111,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       // Write essential user data to cookie → server reads for zero-flash SSR
       // Only name + surname (no middle name, no username)
       const dispName = `${profile.name || ''} ${profile.surname || ''}`.trim();
-      const photoUrl = profile.profile_photo_url || '';
+      const photoUrl = toHttps(profile.profile_photo_url) || '';
       const userData = JSON.stringify({ name: dispName, email: profile.email, photo: photoUrl });
       document.cookie = `user_data=${encodeURIComponent(userData)};path=/;max-age=31536000;SameSite=Lax`;
     }

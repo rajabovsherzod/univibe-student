@@ -22,3 +22,9 @@ export const cx = twMerge;
 export function sortCx<T extends Record<string, string | number | Record<string, string | number | Record<string, string | number>>>>(classes: T): T {
     return classes;
 }
+
+/** Normalize backend image URLs: replace http:// → https:// to prevent mixed-content blocking on HTTPS (Vercel). */
+export function toHttps(url: string | null | undefined): string | undefined {
+    if (!url) return undefined;
+    return url.startsWith("http://") ? "https://" + url.slice(7) : url;
+}

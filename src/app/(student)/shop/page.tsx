@@ -10,6 +10,7 @@ import { useBalance } from '@/hooks/api/use-wallet';
 import { useCreateOrder } from '@/hooks/api/use-orders';
 import { useTranslation } from '@/lib/i18n/i18n';
 import { RedeemModal } from '@/components/student/RedeemModal';
+import { toHttps } from '@/utils/cx';
 
 // ── Skeletons ──────────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () =
       <div className="relative aspect-square bg-bg-tertiary overflow-hidden shrink-0">
         {product.image ? (
           <Image
-            src={product.image}
+            src={toHttps(product.image)!}
             alt={product.name}
             fill
             className="object-cover transition-transform group-hover:scale-105"
