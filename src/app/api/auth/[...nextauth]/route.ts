@@ -8,6 +8,8 @@ declare module "next-auth" {
     accessToken?: string;
     refreshToken?: string;
     error?: string;
+    /** ms timestamp when the current access token expires — used by useActivityTracker */
+    accessTokenExpiry?: number;
     user: {
       name?: string | null;
       email?: string | null;
@@ -35,7 +37,9 @@ declare module "next-auth/jwt" {
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz";
-const ACCESS_TOKEN_LIFETIME_MS = 23 * 60 * 60 * 1000; // 23 h (buffer before 24 h expiry)
+// Backend access token lives 15 min — we consider it expired at 14 min so JWT callback
+// proactively refreshes before the actual expiry.
+const ACCESS_TOKEN_LIFETIME_MS = 14 * 60 * 1000; // 14 minutes
 
 async function refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: number } | null> {
   try {
@@ -168,6 +172,7 @@ export const authOptions: NextAuthOptions = {
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
       session.error = token.error;
+      session.accessTokenExpiry = token.expiresAt; // exposed to client for proactive refresh
       if (session.user) {
         session.user.name = token.fullName as string;
         session.user.universityId = token.universityId as string;

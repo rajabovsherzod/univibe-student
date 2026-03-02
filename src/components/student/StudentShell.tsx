@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from 'sonner';
 import {
@@ -29,6 +29,7 @@ import { useProfileStore } from '@/store/profile-store';
 import { useInitialUser } from '@/providers/app-provider';
 import { TelegramBanner } from '@/components/student/TelegramBanner';
 import { toHttps } from '@/utils/cx';
+import { useActivityTracker } from '@/hooks/use-activity-tracker';
 
 interface NavItem {
   href: string;
@@ -77,10 +78,12 @@ function StatusBadge({ status, t }: { status: 'waited' | 'approved' | 'rejected'
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useTranslation();
   const { data: session, update: updateSession } = useSession();
-  const { data: profile, isError: profileError } = useStudentMe();
+  const { data: profile } = useStudentMe();
+
+  // Activity tracking: inactivity logout + proactive token refresh
+  useActivityTracker();
   const [isDark, setIsDark] = useState(false);
 
   // ── Zustand store: cache profile data for instant sidebar rendering
