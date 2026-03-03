@@ -9,11 +9,7 @@
  *  │  User active?  │  Token state          │  Action             │
  *  ├──────────────────────────────────────────────────────────────┤
  *  │  YES           │  expires in < 5 min   │  proactive refresh  │
- *  │  YES           │  already expired      │  refresh (axios 401 │
- *  │                │                       │  interceptor does   │
- *  │                │                       │  this too)          │
  *  │  NO > 20 min   │  any                  │  auto logout        │
- *  │  Return < 20min│  any                  │  check & refresh    │
  *  └──────────────────────────────────────────────────────────────┘
  *
  *  lastActivity stored in localStorage — survives tab refreshes.
@@ -25,9 +21,9 @@ import { useSession, signOut } from "next-auth/react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;  // 20 min → auto logout
-const PROACTIVE_REFRESH_MS = 5 * 60 * 1000;  // refresh when < 5 min left on token
-const CHECK_INTERVAL_MS = 60 * 1000;        // check every 60 s
-const ACTIVITY_THROTTLE_MS = 30 * 1000;        // update localStorage max every 30 s
+const PROACTIVE_REFRESH_MS = 5 * 60 * 1000;    // refresh when < 5 min left on token
+const CHECK_INTERVAL_MS = 60 * 1000;            // check every 60 s
+const ACTIVITY_THROTTLE_MS = 30 * 1000;         // update localStorage max every 30 s
 const STORAGE_KEY = "uni_last_active";
 
 // User-interaction events that count as "activity"
@@ -36,7 +32,15 @@ const ACTIVITY_EVENTS = ["mousedown", "keydown", "scroll", "touchstart"] as cons
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useActivityTracker() {
   const { data: session, update } = useSession();
-  const lastSavedRef = useRef(0); // tracks last localStorage write (in-memory, no re-render)
+  const lastSavedRef = useRef(0);    // tracks last localStorage write (in-memory, no re-render)
+  const lastRefreshRef = useRef(0);  // throttles proactive refresh calls
+
+  // Keep a ref to the latest session so check() always reads current expiry
+  // without needing session in the effect dependency array (avoids infinite loop).
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  });
 
   // ── 1. Register activity listeners ──────────────────────────────────────────
   useEffect(() => {
@@ -65,8 +69,13 @@ export function useActivityTracker() {
   }, []);
 
   // ── 2. Periodic check (inactivity + proactive refresh) ───────────────────────
+  // We depend on `!!session` (not the full session object) so the effect:
+  //  - starts up as soon as the session becomes available after initial load
+  //  - does NOT restart on every session data update (avoids infinite loops)
+  const hasSession = !!session;
+
   useEffect(() => {
-    if (!session) return;
+    if (!hasSession) return;
 
     const check = async () => {
       // Read last activity from localStorage
@@ -78,18 +87,22 @@ export function useActivityTracker() {
 
       // ── Case 1: Inactive too long → auto logout ───────────────────────────
       if (inactiveMs > INACTIVITY_TIMEOUT_MS) {
-        console.log(`[activity] inactive ${Math.round(inactiveMs / 60000)} min → logout`);
         await signOut({ callbackUrl: `${window.location.origin}/login` });
         return;
       }
 
       // ── Case 2: Token about to expire + user is active → proactive refresh ──
-      const expiry = (session as { accessTokenExpiry?: number }).accessTokenExpiry;
+      // Always read from the ref so we have the latest accessTokenExpiry value
+      // even though session is not in the dependency array.
+      const expiry = (sessionRef.current as { accessTokenExpiry?: number } | null)?.accessTokenExpiry;
       if (expiry) {
         const timeLeft = expiry - Date.now();
         if (timeLeft < PROACTIVE_REFRESH_MS) {
-          console.log(`[activity] token expires in ${Math.round(timeLeft / 1000)}s → refreshing`);
-          try { await update(); } catch { /* axios interceptor handles 401 if this fails */ }
+          // Throttle refresh calls to once per minute to avoid hammering the backend
+          if (Date.now() - lastRefreshRef.current > 60_000) {
+            lastRefreshRef.current = Date.now();
+            try { await update({ forceRefresh: true }); } catch { /* axios interceptor handles 401 if this fails */ }
+          }
         }
       }
     };
@@ -99,13 +112,25 @@ export function useActivityTracker() {
       if (document.visibilityState === "visible") check();
     };
 
-    check(); // immediate check on mount
+    check(); // immediate check on mount / session arrival
     const timer = setInterval(check, CHECK_INTERVAL_MS);
     document.addEventListener("visibilitychange", handleVisibility);
+
+    // Listen for Forced Session Refresh commands emitted by Axios Interceptor
+    const handleForceUpdate = () => {
+      update({ forceRefresh: true });
+    };
+    window.addEventListener("force-session-update", handleForceUpdate);
 
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("force-session-update", handleForceUpdate);
     };
-  }, [session, update]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSession, update]);
+  // - hasSession: re-run when session becomes available (null → truthy)
+  // - update: stable reference from useSession, safe to include
+  // - session object itself intentionally excluded: changes on every update() call
+  //   which would restart the interval; instead we read the latest data via sessionRef
 }

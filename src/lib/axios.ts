@@ -45,14 +45,16 @@ axiosInstance.interceptors.response.use(
         // If a refresh is already in progress, wait for it instead of starting a new one
         if (!refreshPromise) {
           refreshPromise = (async () => {
-            const session = await getSession();
-            if (!session?.refreshToken) return null;
-
-            const response = await axios.post(
-              `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.refresh}`,
-              { refresh: session.refreshToken }
-            );
-            return response.data.access as string | null;
+            // Instead of Axios doing the rest request, we tell NextAuth to do it.
+            // This prevents the split-brain issue where Axios has a new token but NextAuth has an old one.
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("force-session-update"));
+              // Wait a bit for NextAuth to grab the new token and update its session
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const session = await getSession();
+              return session?.accessToken || null;
+            }
+            return null;
           })().finally(() => {
             refreshPromise = null; // Clear mutex after completion
           });
@@ -65,10 +67,8 @@ axiosInstance.interceptors.response.use(
           return axiosInstance(originalRequest);
         }
       } catch (err: any) {
-        console.log("[Axios] Token refresh failed permanently:", err?.message || err);
         // Refresh failed — force logout
         if (typeof window !== "undefined") {
-          console.log("[Axios] Forcing client-side signOut()...");
           document.cookie = "user_data=;path=/;max-age=0;SameSite=Lax";
           localStorage.removeItem("univibe-profile");
           localStorage.removeItem("user-storage");
@@ -77,8 +77,6 @@ axiosInstance.interceptors.response.use(
           signOut({ callbackUrl: `${window.location.origin}/login` });
         }
       }
-    } else if (error.response?.status === 401) {
-      console.log("[Axios] Received 401 but _retry is already true!", originalRequest.url);
     }
 
     return Promise.reject(error);

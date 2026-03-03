@@ -148,6 +148,9 @@
     "redeemAfter": "Qolgan balans",
     "redeemPrice": "Narxi",
     "redeemSuccess": "Muvaffaqiyatli almashtirildi!",
+    "redeemSuccessModalTitle": "Ajoyib xarid! 🎉",
+    "redeemSuccessModalDesc": "Siz ushbu mahsulotni muvaffaqiyatli xarid qildingiz. Uni qabul qilib olish va qo'shimcha ma'lumotlar uchun universitet ma'muriyatiga murojaat qiling.",
+    "redeemSuccessBtn": "Tushunarli",
     "redeemError": "Xatolik yuz berdi",
     "exchange": "Almashtirish",
     "stockLeft": "dona"
@@ -169,6 +172,7 @@
   },
   "balance": {
     "title": "Balans",
+    "countLabel": "Tranzaksiyalar",
     "subtitle": "Coin balansingiz va tranzaksiyalar tarixi",
     "currentBalance": "Joriy balans",
     "lastTransaction": "Oxirgi tranzaksiya",
@@ -180,6 +184,37 @@
     "coinEarned": "Coin berildi",
     "coinSpent": "Coin sarflandi",
     "prev": "Oldingi",
-    "next": "Keyingi"
+    "next": "Keyingi",
+    "motivational": "Har bir harakatingiz coin'ga aylanadi! Aktiv bo'ling va darajangizni oshiring."
+  },
+  "comingSoon": {
+    "title": "Tez orada",
+    "description": "Ushbu sahifa hozirda ishlab chiqilmoqda. Tez orada yangiliklar bo'ladi!"
+  },
+  "home": {
+    "greetingMorning": "Xayrli tong",
+    "greetingAfternoon": "Xayrli kun",
+    "greetingEvening": "Xayrli oqshom",
+    "greetingNight": "Xayrli kech",
+    "subtitle": "Bugun universitetingizda nima bo'layotgani bilan tanishing",
+    "featureTitle": "Kontent tez kunda",
+    "featureDesc": "Tadbirlar, e'lonlar va boshqa imkoniyatlar yaqinda qo'shiladi. Yangilanishlarni kuzatib boring!"
+  },
+  "events": {
+    "title": "Tadbirlar",
+    "subtitle": "Universitetdagi tadbirlarni ko'ring va ro'yxatdan o'ting",
+    "featureTitle": "Tadbirlar tez kunda",
+    "featureDesc": "Talabalar uchun tadbirlar ro'yxati yaqinda ishga tushiriladi. Yangilanishlarni kuzatib boring!"
+  },
+  "myEvents": {
+    "title": "Mening Tadbirlarim",
+    "subtitle": "Ro'yxatdan o'tgan va qatnashgan tadbirlaringizni kuzating",
+    "featureTitle": "Mening tadbirlarim tez kunda",
+    "featureDesc": "Sizning tadbirlaringiz va ro'yxatdan o'tishlaringizni ko'rish imkoniyati yaqinda qo'shiladi."
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "featureTitle": "Bildirishnomalar tez kunda",
+    "featureDesc": "Siz uchun bildirishnomalar yaqinda ishga tushiriladi. Yangilanishlarni kuzatib boring!"
   }
 }

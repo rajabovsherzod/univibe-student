@@ -1,11 +1,11 @@
 import { extendTailwindMerge } from "tailwind-merge";
 
 const twMerge = extendTailwindMerge({
-    extend: {
-        theme: {
-            text: ["display-xs", "display-sm", "display-md", "display-lg", "display-xl", "display-2xl"],
-        },
+  extend: {
+    theme: {
+      text: ["display-xs", "display-sm", "display-md", "display-lg", "display-xl", "display-2xl"],
     },
+  },
 });
 
 /**
@@ -20,7 +20,7 @@ export const cx = twMerge;
  * by the Tailwind IntelliSense by default.
  */
 export function sortCx<T extends Record<string, string | number | Record<string, string | number | Record<string, string | number>>>>(classes: T): T {
-    return classes;
+  return classes;
 }
 
 /**
@@ -31,10 +31,6 @@ export function sortCx<T extends Record<string, string | number | Record<string,
  *   - Any Django media URL format (absolute, relative, http, localhost)
  */
 export function toHttps(url: string | null | undefined): string | undefined {
-    if (!url) return undefined;
-    const proxy = `/api/image?url=${encodeURIComponent(url)}`;
-    if (typeof window !== "undefined") {
-        console.log("[toHttps] raw:", url, "→ proxy:", proxy);
-    }
-    return proxy;
+  if (!url) return undefined;
+  return `/api/image?url=${encodeURIComponent(url)}`;
 }

@@ -26,27 +26,12 @@ interface ProfileStoreState {
   clearProfile: () => void;
 }
 
-// ── Synchronous initial read from localStorage ─────────────────────────
-// zustand persist rehydrates async (after paint) → causes flash
-// We read directly from localStorage for instant initial state
-function getInitialProfile(): CachedProfile | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem("univibe-profile");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return parsed?.state?.profile || null;
-    }
-  } catch {
-    // ignore parse errors
-  }
-  return null;
-}
+// ── Store Definition ───────────────────────────────────────────────────────
 
 export const useProfileStore = create<ProfileStoreState>()(
   persist(
     (set) => ({
-      profile: getInitialProfile(),
+      profile: null,
       setProfile: (profile) => set({ profile }),
       clearProfile: () => set({ profile: null }),
     }),

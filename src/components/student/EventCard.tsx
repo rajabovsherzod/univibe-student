@@ -14,11 +14,7 @@ interface EventCardProps {
 export function EventCard({ event, variant = 'default' }: EventCardProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
+    return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
   };
 
   const formatTime = (time: string) => {
@@ -171,10 +167,7 @@ export function EventCard({ event, variant = 'default' }: EventCardProps) {
 export function EventCarouselCard({ event }: { event: Event }) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
+    return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
   };
 
   return (

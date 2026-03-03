@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
-import { LogIn01 } from "@untitledui/icons";
 
 import { Input } from "@/components/base/input/input";
 import { Button } from "@/components/base/buttons/button";
@@ -45,7 +44,10 @@ export default function LoginPage() {
         password: data.password,
       });
       if (res?.error) {
-        toast.error(t("common.error"), { description: "Email yoki parol noto'g'ri." });
+        const msg = res.error === "CredentialsSignin"
+          ? "Email yoki parol noto'g'ri."
+          : res.error;
+        toast.error(t("common.error"), { description: msg });
       } else {
         toast.success(t("common.success"), {
           description: t("auth.loginWelcome"),
@@ -135,7 +137,7 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <Button type="submit" className="w-full mt-1" size="xl" iconLeading={LogIn01} isLoading={isLoading} isDisabled={isLoading}>
+            <Button type="submit" className="w-full mt-1" size="xl" isLoading={isLoading} isDisabled={isLoading}>
               {t("auth.loginButton")}
             </Button>
           </form>

@@ -10,7 +10,9 @@ import { useBalance } from '@/hooks/api/use-wallet';
 import { useCreateOrder } from '@/hooks/api/use-orders';
 import { useTranslation } from '@/lib/i18n/i18n';
 import { RedeemModal } from '@/components/student/RedeemModal';
+import { ShopSuccessModal } from '@/components/student/ShopSuccessModal';
 import { toHttps } from '@/utils/cx';
+import { playCelebration } from '@/utils/celebration';
 
 // ── Skeletons ──────────────────────────────────────────────────────────────
 
@@ -92,6 +94,7 @@ export default function ShopPage() {
   const [search, setSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const { data: products = [], isPending } = useShopProducts({ search: search || undefined });
   const { data: balance } = useBalance();
@@ -106,8 +109,10 @@ export default function ShopPage() {
       {
         onSuccess: () => {
           toast.success(t('shop.redeemSuccess'));
+          playCelebration();
           setIsRedeeming(false);
           setSelectedProduct(null);
+          setShowSuccessModal(true);
         },
         onError: (err: any) => {
           const msg = err?.response?.data?.detail
@@ -177,6 +182,12 @@ export default function ShopPage() {
         isLoading={isRedeeming}
         onConfirm={handleRedeem}
         onClose={() => setSelectedProduct(null)}
+      />
+
+      {/* Modern Success Modal */}
+      <ShopSuccessModal
+        isOpen={showSuccessModal}
+        onOpenChange={setShowSuccessModal}
       />
     </>
   );

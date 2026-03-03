@@ -7,6 +7,7 @@ import { CoinPill } from '@/components/student/CoinPill';
 import { useTranslation } from '@/lib/i18n/i18n';
 import type { ShopProduct } from '@/hooks/api/use-shop';
 import { toHttps } from '@/utils/cx';
+import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
 
 interface RedeemModalProps {
   product: ShopProduct | null;
@@ -135,7 +136,7 @@ export function RedeemModal({ product, userBalance, isLoading, onConfirm, onClos
                 </>
               ) : (
                 <>
-                  <CoinVerticalIcon size={15} weight="fill" />
+                  <CoinOutlineIcon size={16} color="currentColor" strokeWidth={20} />
                   {t('shop.redeemConfirm')}
                 </>
               )}

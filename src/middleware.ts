@@ -41,6 +41,10 @@ export default withAuth(
     return NextResponse.next();
   },
   {
+    secret: process.env.NEXTAUTH_SECRET,
+    pages: {
+      signIn: "/login",
+    },
     callbacks: {
       // Unauthenticated or expired refresh token → redirect to signIn page
       authorized: ({ token }) => {

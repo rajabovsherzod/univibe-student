@@ -148,6 +148,9 @@
     "redeemAfter": "Remaining balance",
     "redeemPrice": "Price",
     "redeemSuccess": "Successfully redeemed!",
+    "redeemSuccessModalTitle": "Great Purchase! 🎉",
+    "redeemSuccessModalDesc": "You have successfully purchased this item. Please contact the university administration to receive it and for further information.",
+    "redeemSuccessBtn": "Got it",
     "redeemError": "An error occurred",
     "exchange": "Exchange",
     "stockLeft": "left"
@@ -180,6 +183,37 @@
     "coinEarned": "Coins earned",
     "coinSpent": "Coins spent",
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "motivational": "Every action turns into coins! Stay active and level up."
+  },
+  "comingSoon": {
+    "title": "Coming Soon",
+    "description": "This page is currently under development. Stay tuned for updates!"
+  },
+  "home": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "greetingNight": "Good night",
+    "subtitle": "Discover what's happening at your university today",
+    "featureTitle": "Content coming soon",
+    "featureDesc": "Events, announcements, and more features will be added soon. Stay tuned!"
+  },
+  "events": {
+    "title": "Events",
+    "subtitle": "Browse and register for university events",
+    "featureTitle": "Events coming soon",
+    "featureDesc": "The list of student events will be launched soon. Stay tuned!"
+  },
+  "myEvents": {
+    "title": "My Events",
+    "subtitle": "Keep track of events you have registered for and attended",
+    "featureTitle": "My events coming soon",
+    "featureDesc": "The ability to view your events and registrations will be added soon."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "featureTitle": "Notifications coming soon",
+    "featureDesc": "Notifications for you will be launched soon. Stay tuned!"
   }
 }

@@ -3,34 +3,37 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { CaretRight, House } from '@phosphor-icons/react';
+import { useTranslation } from '@/lib/i18n/i18n';
 
 interface BreadcrumbItem {
   label: string;
   href: string;
 }
 
-// Map paths to human-readable labels
-const pathLabels: Record<string, string> = {
-  '': 'Home',
-  'events': 'Events',
-  'leaderboard': 'Leaderboard',
-  'shop': 'Shop',
-  'profile': 'Profile',
-  'wallet': 'Wallet',
-  'my-events': 'My Events',
-  'notifications': 'Notifications',
-  'settings': 'Settings',
-};
-
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const { t } = useTranslation();
+
+  // Map paths to human-readable labels
+  const pathLabels: Record<string, string> = {
+    '': t('nav.home'),
+    'events': t('nav.events'),
+    'leaderboard': t('nav.leaderboard'),
+    'shop': t('nav.shop'),
+    'profile': t('nav.profile'),
+    'balance': t('nav.balance'),
+    'wallet': t('nav.balance'),
+    'my-events': t('nav.myEvents'),
+    'notifications': t('nav.notifications'),
+    'settings': t('nav.settings') || 'Settings',
+  };
 
   // Generate breadcrumb items from pathname
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const segments = pathname.split('/').filter(Boolean);
 
     const breadcrumbs: BreadcrumbItem[] = [
-      { label: 'Home', href: '/' }
+      { label: t('nav.home'), href: '/' }
     ];
 
     let currentPath = '';
@@ -54,9 +57,19 @@ export function Breadcrumbs() {
 
   const breadcrumbs = generateBreadcrumbs();
 
-  // Don't show breadcrumbs on home page
+  // Allow breadcrumb to render even on home page as requested
   if (pathname === '/') {
-    return null;
+    return (
+      <nav aria-label="Breadcrumb" className="flex items-center mt-1">
+        <ol className="flex items-center gap-1.5 text-sm">
+          <li className="flex items-center gap-1.5">
+            <span className="font-medium text-fg-primary truncate max-w-[150px]">
+              {t('nav.home')}
+            </span>
+          </li>
+        </ol>
+      </nav>
+    );
   }
 
   return (

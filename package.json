@@ -20,6 +20,7 @@
     "@untitledui/file-icons": "^0.0.9",
     "@untitledui/icons": "^0.0.21",
     "axios": "^1.13.5",
+    "canvas-confetti": "^1.9.4",
     "date-fns": "^4.1.0",
     "input-otp": "^1.4.2",
     "lottie-react": "^2.4.1",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

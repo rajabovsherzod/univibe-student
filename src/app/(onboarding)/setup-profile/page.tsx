@@ -112,7 +112,6 @@ export default function PersonalInfoPage() {
       toast.success(t("common.success"));
     } catch (e: any) {
       const errData = e?.response?.data;
-      console.error("API Profile Rejection Data:", errData);
       const msg = errData?.detail || errData?.message || errData || t("common.error");
       toast.error(t("common.error"), { description: typeof msg === "string" ? msg : JSON.stringify(msg, null, 2) });
     }

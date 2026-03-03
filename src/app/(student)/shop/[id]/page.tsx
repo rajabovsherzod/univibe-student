@@ -8,10 +8,12 @@ import { getShopItem, getStudent, redeemItem } from '@/lib/api/student';
 import { type ShopItem } from '@/types/student';
 import { Button } from '@/components/ui/Button';
 import { StockBadge, CategoryBadge } from '@/components/ui/Badge';
-import { PremiumConfirmModal, SuccessModal } from '@/components/ui/Modal';
+import { PremiumConfirmModal } from '@/components/ui/Modal';
+import { ShopSuccessModal } from '@/components/student/ShopSuccessModal';
 import { CoinPill } from '@/components/student/CoinPill';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from 'sonner';
+import { playCelebration } from '@/utils/celebration';
 
 export default function ShopItemPage() {
   const params = useParams();
@@ -39,7 +41,6 @@ export default function ShopItemPage() {
       setItem(itemData);
       setUserCoins(student.coins);
     } catch (error) {
-      console.error('Failed to load item:', error);
     } finally {
       setLoading(false);
     }
@@ -55,6 +56,7 @@ export default function ShopItemPage() {
         setItem({ ...item, stock: item.stock - 1 });
         setShowConfirmModal(false);
         setShowSuccessModal(true);
+        playCelebration();
         toast.success('Item redeemed successfully!');
       } else {
         toast.error(result.error || 'Failed to redeem item');
@@ -203,12 +205,9 @@ export default function ShopItemPage() {
       />
 
       {/* Success Modal - Step 2 */}
-      <SuccessModal
+      <ShopSuccessModal
         isOpen={showSuccessModal}
         onOpenChange={setShowSuccessModal}
-        title="Redemption Successful!"
-        description={`You've successfully redeemed "${item.name}". Check your notifications for pickup/delivery details.`}
-        icon={<CheckCircle className="w-6 h-6" />}
       />
     </div>
   );

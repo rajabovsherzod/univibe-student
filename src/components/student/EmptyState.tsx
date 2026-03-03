@@ -104,4 +104,20 @@ export function NoRegisteredEvents() {
   );
 }
 
+export function ComingSoon({ title, description }: { title: string, description: string }) {
+  // We use Phosphor's Sparkle icon and give it brand colors
+  // Since we don't have direct access to Phosphor Sparkle here, we use Lucide's empty state defaults 
+  // with a custom brand color style, let's use a nice box/sparkle icon from lucide:
+  const { Sparkles } = require('lucide-react');
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400 rotate-3 transition-transform hover:rotate-6">
+        <Sparkles strokeWidth={1.5} className="w-8 h-8" />
+      </div>
+      <h3 className="text-xl font-bold text-fg-primary mb-2">{title}</h3>
+      <p className="text-sm text-fg-secondary max-w-sm mb-6 leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
 export default EmptyState;

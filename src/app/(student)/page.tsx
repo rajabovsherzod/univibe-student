@@ -13,9 +13,8 @@ export default async function HomePage() {
       <HomeHeader studentName={studentName} />
 
       <FeatureComingSoon
-        icon={CalendarBlankIcon}
-        title="Kontent tez kunda"
-        description="Tadbirlar, e'lonlar va boshqa imkoniyatlar yaqinda qo'shiladi. Yangilanishlarni kuzatib boring!"
+        iconName="calendar"
+        translationKey="home"
       />
     </div>
   );

@@ -57,6 +57,8 @@ const mobileNavItems: NavItem[] = [
   { href: '/events', labelKey: 'nav.events', icon: CalendarBlankIcon },
   { href: '/leaderboard', labelKey: 'nav.leaderboard', icon: TrophyIcon },
   { href: '/shop', labelKey: 'nav.shop', icon: StorefrontIcon },
+  { href: '/my-events', labelKey: 'nav.myEvents', icon: CalendarCheckIcon },
+  { href: '/balance', labelKey: 'nav.balance', icon: WalletIcon },
   { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
 ];
 
@@ -331,9 +333,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile Bottom Nav */}
+      {/* Mobile Bottom Nav - 7-item Layout */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border-secondary bg-bg-secondary/95 backdrop-blur-sm">
-        <div className="flex justify-around items-center h-16 px-1">
+        <div className="flex items-center h-16 px-0.5">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -344,10 +346,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 <button
                   key={item.href}
                   onClick={() => toast.warning(t('personalInfo.fillFirstMessage') || "Iltimos, avval shaxsiy ma'lumotlaringizni to'ldiring!")}
-                  className="flex flex-col items-center justify-center w-16 h-full gap-1 opacity-50 cursor-not-allowed text-fg-quaternary"
+                  className="flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5 opacity-50 cursor-not-allowed text-fg-quaternary"
                 >
-                  <Icon size={22} weight="regular" />
-                  <span className="text-[10px] font-medium max-w-[64px] truncate">{t(item.labelKey)}</span>
+                  <Icon size={20} weight="regular" />
+                  <span className="text-[9px] font-medium w-full text-center truncate px-0.5">{t(item.labelKey)}</span>
                 </button>
               );
             }
@@ -356,11 +358,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${active ? 'text-brand-600' : 'text-fg-quaternary hover:text-fg-secondary'
-                  }`}
+                className={`flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5 transition-colors ${active ? 'text-brand-600' : 'text-fg-quaternary hover:text-fg-secondary'}`}
               >
-                <Icon size={22} weight={active ? 'fill' : 'regular'} />
-                <span className="text-[10px] font-medium max-w-[64px] truncate">{t(item.labelKey)}</span>
+                <Icon size={20} weight={active ? 'fill' : 'regular'} />
+                <span className="text-[9px] font-medium w-full text-center truncate px-0.5">{t(item.labelKey)}</span>
               </Link>
             );
           })}

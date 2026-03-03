@@ -24,12 +24,12 @@ function shortName(fullName: string): string {
 
 function PodiumSkeleton() {
   return (
-    <div className="flex items-end justify-center gap-2 sm:gap-5 py-6 px-2">
+    <div className="flex items-end justify-center gap-1.5 sm:gap-5 py-6 px-4 sm:px-2">
       {[100, 130, 80].map((h, i) => (
-        <div key={i} className="flex flex-col items-center flex-1 max-w-[110px] sm:max-w-[150px]">
-          <div className="size-12 sm:size-16 rounded-full skeleton-shimmer mb-2" />
-          <div className="h-3 w-14 rounded skeleton-shimmer mb-1.5" />
-          <div className="h-6 w-14 rounded-full skeleton-shimmer mb-2" />
+        <div key={i} className="flex flex-col items-center flex-1 max-w-[28vw] sm:max-w-[150px]">
+          <div className="size-10 sm:size-16 rounded-full skeleton-shimmer mb-2" />
+          <div className="h-3 w-12 rounded skeleton-shimmer mb-1.5" />
+          <div className="h-5 w-12 rounded-full skeleton-shimmer mb-2" />
           <div className="w-full rounded-t-xl skeleton-shimmer" style={{ height: h }} />
         </div>
       ))}
@@ -82,29 +82,29 @@ function PodiumCard({ item, position }: { item: LeaderboardItem; position: 1 | 2
   const initial = name.charAt(0).toUpperCase();
 
   return (
-    <div className="flex flex-col items-center flex-1 max-w-[110px] sm:max-w-[150px] lg:max-w-[170px]">
-      {/* Avatar — clean, no colored borders */}
-      <div className="size-12 sm:size-16 lg:size-20 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 mb-1.5">
+    <div className="flex flex-col items-center flex-1 min-w-0 max-w-[28vw] sm:max-w-[150px] lg:max-w-[170px]">
+      {/* Avatar */}
+      <div className="size-10 sm:size-16 lg:size-20 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 mb-1 sm:mb-1.5 shrink-0">
         {item.profile_photo ? (
           <Image src={toHttps(item.profile_photo)!} alt={name} width={80} height={80} className="size-full object-cover" unoptimized />
         ) : (
-          <div className="size-full flex items-center justify-center text-lg sm:text-xl lg:text-2xl font-bold text-brand-600 dark:text-brand-400">{initial}</div>
+          <div className="size-full flex items-center justify-center text-sm sm:text-xl lg:text-2xl font-bold text-brand-600 dark:text-brand-400">{initial}</div>
         )}
       </div>
 
       {/* Name only */}
-      <p className="text-xs sm:text-sm font-semibold text-fg-primary text-center truncate w-full px-0.5">{name}</p>
+      <p className="text-[10px] sm:text-sm font-semibold text-fg-primary text-center truncate w-full px-0.5">{name}</p>
 
-      {/* Coins with shimmer */}
-      <div className="mt-1.5">
+      {/* Coins */}
+      <div className="mt-1 sm:mt-1.5">
         <CoinPill amount={item.total_coins} size="sm" variant={cfg.coinVariant} />
       </div>
 
       {/* Stand with large position number */}
-      <div className={`mt-3 w-full ${cfg.standH} rounded-t-xl ${cfg.standBg} relative overflow-hidden`}>
+      <div className={`mt-2 sm:mt-3 w-full ${cfg.standH} rounded-t-xl ${cfg.standBg} relative overflow-hidden`}>
         <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-white/70 drop-shadow-sm">{position}</span>
+          <span className="text-2xl sm:text-4xl lg:text-5xl font-black text-white/70 drop-shadow-sm">{position}</span>
         </div>
       </div>
     </div>
@@ -166,24 +166,22 @@ export default function LeaderboardPage() {
                 items={[{ id: 'ALL_TIME', label: t('leaderboard.filterAllTime') }, { id: 'YEARLY', label: t('leaderboard.filterYearly') }]}
               >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
             </div>
-            {faculties.length > 0 && (
-              <div className="w-40">
-                <Select label="" placeholder={t('leaderboard.filterFaculty')} size="md"
-                  selectedKey={filters.faculty_public_id || null}
-                  onSelectionChange={(k) => setFilters(prev => ({ ...prev, faculty_public_id: k ? String(k) : undefined }))}
-                  items={faculties.map(f => ({ id: f.public_id, label: f.name }))}
-                >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
-              </div>
-            )}
-            {yearLevels.length > 0 && (
-              <div className="w-32">
-                <Select label="" placeholder={t('leaderboard.filterYear')} size="md"
-                  selectedKey={filters.year_level_public_id || null}
-                  onSelectionChange={(k) => setFilters(prev => ({ ...prev, year_level_public_id: k ? String(k) : undefined }))}
-                  items={yearLevels.map(y => ({ id: y.public_id, label: y.name }))}
-                >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
-              </div>
-            )}
+
+            <div className="w-40">
+              <Select label="" placeholder={t('leaderboard.filterFaculty')} size="md"
+                selectedKey={filters.faculty_public_id || null}
+                onSelectionChange={(k) => setFilters(prev => ({ ...prev, faculty_public_id: k ? String(k) : undefined }))}
+                items={faculties.map(f => ({ id: f.public_id, label: f.name }))}
+              >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
+            </div>
+
+            <div className="w-32">
+              <Select label="" placeholder={t('leaderboard.filterYear')} size="md"
+                selectedKey={filters.year_level_public_id || null}
+                onSelectionChange={(k) => setFilters(prev => ({ ...prev, year_level_public_id: k ? String(k) : undefined }))}
+                items={yearLevels.map(y => ({ id: y.public_id, label: y.name }))}
+              >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
+            </div>
           </div>
 
           {/* Mobile filter toggle */}
@@ -203,15 +201,14 @@ export default function LeaderboardPage() {
                 items={[{ id: 'ALL_TIME', label: t('leaderboard.filterAll') }, { id: 'YEARLY', label: t('leaderboard.filterYearly') }]}
               >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
             </div>
-            {faculties.length > 0 && (
-              <div className="flex-1">
-                <Select label="" placeholder={t('leaderboard.filterFaculty')} size="md"
-                  selectedKey={filters.faculty_public_id || null}
-                  onSelectionChange={(k) => setFilters(prev => ({ ...prev, faculty_public_id: k ? String(k) : undefined }))}
-                  items={faculties.map(f => ({ id: f.public_id, label: f.name }))}
-                >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
-              </div>
-            )}
+
+            <div className="flex-1">
+              <Select label="" placeholder={t('leaderboard.filterFaculty')} size="md"
+                selectedKey={filters.faculty_public_id || null}
+                onSelectionChange={(k) => setFilters(prev => ({ ...prev, faculty_public_id: k ? String(k) : undefined }))}
+                items={faculties.map(f => ({ id: f.public_id, label: f.name }))}
+              >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
+            </div>
           </div>
         )}
       </div>
@@ -229,7 +226,7 @@ export default function LeaderboardPage() {
           {isPending ? (
             <PodiumSkeleton />
           ) : podiumOrder.length > 0 ? (
-            <div className="flex items-end justify-center gap-2 sm:gap-4 lg:gap-6 pb-2">
+            <div className="flex items-end justify-center gap-1.5 sm:gap-4 lg:gap-6 pb-2 px-4 sm:px-0">
               {podiumOrder.map(({ item, pos }, idx) => (
                 <PodiumCard key={item.student_public_id || `p-${idx}`} item={item} position={pos} />
               ))}
