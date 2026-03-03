@@ -65,9 +65,11 @@ axiosInstance.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return axiosInstance(originalRequest);
         }
-      } catch {
+      } catch (err: any) {
+        console.log("[Axios] Token refresh failed permanently:", err?.message || err);
         // Refresh failed — force logout
         if (typeof window !== "undefined") {
+          console.log("[Axios] Forcing client-side signOut()...");
           document.cookie = "user_data=;path=/;max-age=0;SameSite=Lax";
           localStorage.removeItem("univibe-profile");
           localStorage.removeItem("user-storage");
@@ -76,6 +78,8 @@ axiosInstance.interceptors.response.use(
           signOut({ callbackUrl: `${window.location.origin}/login` });
         }
       }
+    } else if (error.response?.status === 401) {
+      console.log("[Axios] Received 401 but _retry is already true!", originalRequest.url);
     }
 
     return Promise.reject(error);

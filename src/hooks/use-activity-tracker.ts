@@ -24,11 +24,11 @@ import { useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const INACTIVITY_TIMEOUT_MS  = 20 * 60 * 1000;  // 20 min → auto logout
-const PROACTIVE_REFRESH_MS   =  5 * 60 * 1000;  // refresh when < 5 min left on token
-const CHECK_INTERVAL_MS      = 60 * 1000;        // check every 60 s
-const ACTIVITY_THROTTLE_MS   = 30 * 1000;        // update localStorage max every 30 s
-const STORAGE_KEY             = "uni_last_active";
+const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;  // 20 min → auto logout
+const PROACTIVE_REFRESH_MS = 5 * 60 * 1000;  // refresh when < 5 min left on token
+const CHECK_INTERVAL_MS = 60 * 1000;        // check every 60 s
+const ACTIVITY_THROTTLE_MS = 30 * 1000;        // update localStorage max every 30 s
+const STORAGE_KEY = "uni_last_active";
 
 // User-interaction events that count as "activity"
 const ACTIVITY_EVENTS = ["mousedown", "keydown", "scroll", "touchstart"] as const;
@@ -40,10 +40,12 @@ export function useActivityTracker() {
 
   // ── 1. Register activity listeners ──────────────────────────────────────────
   useEffect(() => {
-    // Init lastActivity if not present (covers first login or cleared storage)
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      localStorage.setItem(STORAGE_KEY, String(Date.now()));
-    }
+    // ALWAYS reset the activity tracker on mount!
+    // If we only set it when missing, a stale timestamp from a previous session
+    // will instantly trigger the 20-minute logout loop right after a fresh login.
+    const mountTime = Date.now();
+    localStorage.setItem(STORAGE_KEY, String(mountTime));
+    lastSavedRef.current = mountTime;
 
     const handleActivity = () => {
       const now = Date.now();

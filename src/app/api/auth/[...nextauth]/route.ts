@@ -138,6 +138,7 @@ export const authOptions: NextAuthOptions = {
       // Initial sign in — populate token from user object
       if (user) {
         const u = user as any;
+        console.log("[NextAuth] JWT: Initial sign in detected. Setting expiresAt.", { exp: Date.now() + ACCESS_TOKEN_LIFETIME_MS });
         return {
           ...token,
           accessToken: u.accessToken,
@@ -153,18 +154,26 @@ export const authOptions: NextAuthOptions = {
 
       // Token still valid — return as-is
       if (token.expiresAt && Date.now() < token.expiresAt) {
+        console.log(`[NextAuth] JWT: Token still valid. Expires in: ${Math.round((token.expiresAt - Date.now()) / 1000)}s`);
         return token;
       }
+
+      console.log("[NextAuth] JWT: Token EXPIRED or missing expiresAt. Attempting server-side refresh...");
 
       // Access token expired — attempt server-side refresh
       if (token.refreshToken) {
         const refreshed = await refreshAccessToken(token.refreshToken);
         if (refreshed) {
+          console.log("[NextAuth] JWT: Refresh successful!", refreshed.expiresAt);
           return { ...token, ...refreshed, error: undefined };
         }
+        console.log("[NextAuth] JWT: Refresh failed. Token rejected by backend.");
+      } else {
+        console.log("[NextAuth] JWT: No refreshToken found in token payload!");
       }
 
       // Refresh failed — mark session as expired; middleware will redirect to login
+      console.log("[NextAuth] JWT: Marking session as RefreshAccessTokenError");
       return { ...token, error: "RefreshAccessTokenError" };
     },
 
