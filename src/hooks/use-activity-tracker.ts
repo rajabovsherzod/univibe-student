@@ -18,6 +18,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { registerSessionUpdate } from "@/lib/session-updater";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;  // 20 min → auto logout
@@ -34,6 +35,12 @@ export function useActivityTracker() {
   const { data: session, update } = useSession();
   const lastSavedRef = useRef(0);    // tracks last localStorage write (in-memory, no re-render)
   const lastRefreshRef = useRef(0);  // throttles proactive refresh calls
+
+  // Register `update` in the singleton so axios interceptor can call it directly.
+  // This runs whenever `update` reference changes (which is essentially once on mount).
+  useEffect(() => {
+    registerSessionUpdate(update);
+  }, [update]);
 
   // Keep a ref to the latest session so check() always reads current expiry
   // without needing session in the effect dependency array (avoids infinite loop).
@@ -116,16 +123,9 @@ export function useActivityTracker() {
     const timer = setInterval(check, CHECK_INTERVAL_MS);
     document.addEventListener("visibilitychange", handleVisibility);
 
-    // Listen for Forced Session Refresh commands emitted by Axios Interceptor
-    const handleForceUpdate = () => {
-      update({ forceRefresh: true });
-    };
-    window.addEventListener("force-session-update", handleForceUpdate);
-
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("force-session-update", handleForceUpdate);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasSession, update]);

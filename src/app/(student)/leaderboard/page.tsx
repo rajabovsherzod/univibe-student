@@ -40,15 +40,15 @@ function PodiumSkeleton() {
 function TableRowSkeleton() {
   return (
     <tr className="border-b border-border-secondary last:border-0">
-      <td className="py-3 px-3"><div className="h-4 w-6 rounded skeleton-shimmer mx-auto" /></td>
-      <td className="py-3 px-3">
-        <div className="flex items-center gap-2.5">
-          <div className="size-8 rounded-full skeleton-shimmer shrink-0" />
-          <div className="h-4 w-28 rounded skeleton-shimmer" />
+      <td className="py-3 px-2 sm:px-3"><div className="h-4 w-5 rounded skeleton-shimmer mx-auto" /></td>
+      <td className="py-3 px-2 sm:px-3">
+        <div className="flex items-center gap-2">
+          <div className="size-7 sm:size-8 rounded-full skeleton-shimmer shrink-0" />
+          <div className="h-4 w-24 sm:w-28 rounded skeleton-shimmer" />
         </div>
       </td>
-      <td className="py-3 px-3 hidden md:table-cell"><div className="h-3 w-24 rounded skeleton-shimmer" /></td>
-      <td className="py-3 px-3 text-right"><div className="h-6 w-16 rounded-full skeleton-shimmer ml-auto" /></td>
+      <td className="py-3 px-2 sm:px-3 hidden md:table-cell"><div className="h-3 w-24 rounded skeleton-shimmer" /></td>
+      <td className="py-3 px-2 sm:px-3 text-right"><div className="h-6 w-14 sm:w-16 rounded-full skeleton-shimmer ml-auto" /></td>
     </tr>
   );
 }
@@ -247,14 +247,14 @@ export default function LeaderboardPage() {
             <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{t('leaderboard.title')}</p>
           </div>
 
-          <div className="overflow-x-auto -mx-3 sm:-mx-6">
-            <table className="w-full min-w-[380px]">
+          <div className="overflow-x-hidden">
+            <table className="w-full">
               <thead>
                 <tr className="border-b-2 border-border-secondary">
-                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-3 sm:px-4 w-12">#</th>
-                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-3 sm:px-4">{t('leaderboard.name')}</th>
-                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-3 sm:px-4 hidden md:table-cell">{t('profile.faculty')}</th>
-                  <th className="text-right text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-3 sm:px-4 w-28">{t('leaderboard.coins')}</th>
+                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-10 sm:w-12">#</th>
+                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4">{t('leaderboard.name')}</th>
+                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 hidden md:table-cell">{t('profile.faculty')}</th>
+                  <th className="text-right text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-20 sm:w-28">{t('leaderboard.coins')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -273,32 +273,32 @@ export default function LeaderboardPage() {
                           isMe ? 'bg-brand-50/60 dark:bg-brand-950/30' : 'hover:bg-bg-primary/50',
                         ].join(' ')}
                       >
-                        <td className="py-3 px-3 sm:px-4">
-                          <span className={`text-sm font-bold tabular-nums ${isMe ? 'text-brand-600 dark:text-brand-400' : 'text-fg-quaternary'}`}>
+                        <td className="py-3 px-2 sm:px-4">
+                          <span className={`text-xs sm:text-sm font-bold tabular-nums ${isMe ? 'text-brand-600 dark:text-brand-400' : 'text-fg-quaternary'}`}>
                             {item.rank ?? (idx + 4)}
                           </span>
                         </td>
-                        <td className="py-3 px-3 sm:px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="size-8 sm:size-9 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
+                        <td className="py-3 px-2 sm:px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="size-7 sm:size-9 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
                               {item.profile_photo ? (
                                 <Image src={toHttps(item.profile_photo)!} alt="" width={36} height={36} className="size-full object-cover" unoptimized />
                               ) : (
-                                <div className="size-full flex items-center justify-center text-xs font-bold text-brand-600 dark:text-brand-400">{initial}</div>
+                                <div className="size-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-brand-600 dark:text-brand-400">{initial}</div>
                               )}
                             </div>
                             <div className="min-w-0">
-                              <p className={`text-sm font-semibold truncate ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-fg-primary'}`}>
+                              <p className={`text-xs sm:text-sm font-semibold truncate ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-fg-primary'}`}>
                                 {name}
                                 {isMe && <span className="text-[10px] text-fg-tertiary ml-1">({t('leaderboard.myRank')})</span>}
                               </p>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
+                        <td className="py-3 px-2 sm:px-4 hidden md:table-cell">
                           <p className="text-xs text-fg-tertiary truncate max-w-[200px]">{item.faculty || '—'}</p>
                         </td>
-                        <td className="py-3 px-3 sm:px-4 text-right">
+                        <td className="py-3 px-2 sm:px-4 text-right">
                           <CoinPill amount={item.total_coins} size="sm" variant="primary" />
                         </td>
                       </tr>

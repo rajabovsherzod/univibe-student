@@ -1,6 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { API_CONFIG } from "@/lib/api/config";
-import axiosInstance from "@/lib/axios";
 
 export interface University {
   public_id: string;
@@ -12,8 +10,12 @@ export const useUniversities = () => {
   return useQuery({
     queryKey: ["universities"],
     queryFn: async () => {
-      const { data } = await axiosInstance.get<University[]>(API_CONFIG.endpoints.university.list);
-      return data;
+      // Use local Next.js proxy to avoid CORS issues in production.
+      // Server-side fetch (no browser CORS restrictions) + 60s cache.
+      const res = await fetch("/api/universities");
+      if (!res.ok) throw new Error("Universities fetch failed");
+      return res.json() as Promise<University[]>;
     },
+    staleTime: 5 * 60 * 1000,
   });
 };

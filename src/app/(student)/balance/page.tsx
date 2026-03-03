@@ -60,20 +60,6 @@ function getTxIcon(tx: CoinTransaction, isEarned: boolean) {
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────
 
-function HeroSkeleton() {
-  return (
-    <div className="rounded-2xl bg-bg-secondary border border-border-secondary p-5 sm:p-6">
-      <div className="space-y-4">
-        <div className="h-6 w-36 rounded-full skeleton-shimmer" />
-        <div className="h-10 w-52 rounded-full skeleton-shimmer" />
-        <div className="h-3 w-44 rounded skeleton-shimmer" />
-        <div className="h-3 w-32 rounded skeleton-shimmer" />
-        <div className="h-10 rounded-xl skeleton-shimmer mt-1" />
-      </div>
-    </div>
-  );
-}
-
 function TxSkeleton() {
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border-secondary last:border-0">
@@ -156,46 +142,32 @@ export default function BalancePage() {
           </div>
 
           {/* Balance + stats row */}
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-            <div>
+          <div>
+            {balanceLoading ? (
+              <div className="h-10 w-28 rounded-xl skeleton-shimmer bg-bg-tertiary" />
+            ) : (
+              <CoinPill amount={balance?.total_balance ?? 0} size="lg" variant="gold" />
+            )}
+            <div className="mt-3 space-y-0.5">
               {balanceLoading ? (
-                <div className="h-10 w-28 rounded-xl skeleton-shimmer bg-bg-tertiary" />
+                <>
+                  <div className="h-4 w-32 rounded skeleton-shimmer bg-bg-tertiary mb-1" />
+                  <div className="h-4 w-48 rounded skeleton-shimmer bg-bg-tertiary" />
+                </>
               ) : (
-                <CoinPill amount={balance?.total_balance ?? 0} size="lg" variant="gold" />
+                <>
+                  {balance?.university_name && (
+                    <p className="text-xs font-semibold text-fg-secondary">{balance.university_name}</p>
+                  )}
+                  {balance?.last_transaction_at ? (
+                    <p className="text-xs text-fg-tertiary">
+                      {t('balance.lastTransaction')}: {formatDateShort(balance.last_transaction_at)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-fg-quaternary">{t('balance.noTransactionsYet')}</p>
+                  )}
+                </>
               )}
-              <div className="mt-3 space-y-0.5">
-                {balanceLoading ? (
-                  <>
-                    <div className="h-4 w-32 rounded skeleton-shimmer bg-bg-tertiary mb-1" />
-                    <div className="h-4 w-48 rounded skeleton-shimmer bg-bg-tertiary" />
-                  </>
-                ) : (
-                  <>
-                    {balance?.university_name && (
-                      <p className="text-xs font-semibold text-fg-secondary">{balance.university_name}</p>
-                    )}
-                    {balance?.last_transaction_at ? (
-                      <p className="text-xs text-fg-tertiary">
-                        {t('balance.lastTransaction')}: {formatDateShort(balance.last_transaction_at)}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-fg-quaternary">{t('balance.noTransactionsYet')}</p>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Transaction count stat */}
-            <div className="shrink-0 bg-brand-600 rounded-xl px-4 py-3 text-center sm:min-w-[100px] shadow-sm flex flex-col justify-center border border-brand-500">
-              {txLoading || !txData ? (
-                <div className="h-7 w-12 mx-auto rounded skeleton-shimmer bg-brand-500/50" />
-              ) : (
-                <p className="text-2xl font-bold text-white tabular-nums leading-none">
-                  {totalCount}
-                </p>
-              )}
-              <p className="text-[11px] text-brand-100 mt-1 uppercase tracking-wider font-semibold">{t('balance.countLabel') || "Tranzaksiyalar"}</p>
             </div>
           </div>
 
@@ -214,7 +186,7 @@ export default function BalancePage() {
         <div className="flex items-center justify-between px-1">
           <h2 className="text-[15px] font-bold text-fg-primary">{t('balance.transactionHistory')}</h2>
           {totalCount > 0 && !txLoading && (
-            <span className="text-xs text-fg-tertiary bg-bg-tertiary px-2.5 py-1 rounded-full font-medium">
+            <span className="text-xs text-white bg-brand-500 px-2.5 py-1 rounded-full font-medium">
               {totalCount} {t('balance.totalCount')}
             </span>
           )}

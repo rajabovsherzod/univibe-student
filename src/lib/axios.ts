@@ -1,6 +1,7 @@
 import axios from "axios";
 import { API_CONFIG } from "@/lib/api/config";
 import { getSession, signOut } from "next-auth/react";
+import { forceTokenRefresh } from "@/lib/session-updater";
 
 declare module "next-auth" {
   interface Session {
@@ -41,41 +42,37 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // If a refresh is already in progress, wait for it instead of starting a new one
-        if (!refreshPromise) {
-          refreshPromise = (async () => {
-            // Instead of Axios doing the rest request, we tell NextAuth to do it.
-            // This prevents the split-brain issue where Axios has a new token but NextAuth has an old one.
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new Event("force-session-update"));
-              // Wait a bit for NextAuth to grab the new token and update its session
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              const session = await getSession();
-              return session?.accessToken || null;
-            }
-            return null;
-          })().finally(() => {
-            refreshPromise = null; // Clear mutex after completion
-          });
-        }
+      // Mutex: if a refresh is already in progress, wait for it
+      if (!refreshPromise) {
+        refreshPromise = (async () => {
+          // forceTokenRefresh() calls update({ forceRefresh: true }) via the singleton
+          // registered in useActivityTracker. This triggers the NextAuth JWT callback
+          // on the server (trigger="update"), which calls refreshAccessToken() and
+          // stores the new token in the session cookie.
+          //
+          // Unlike getSession() (GET /api/auth/session), update() (POST) DOES trigger
+          // the JWT callback — so the expired token is actually refreshed server-side.
+          return forceTokenRefresh();
+        })().finally(() => {
+          refreshPromise = null;
+        });
+      }
 
-        const newAccessToken = await refreshPromise;
+      const newAccessToken = await refreshPromise;
 
-        if (newAccessToken) {
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return axiosInstance(originalRequest);
-        }
-      } catch (err: any) {
-        // Refresh failed — force logout
-        if (typeof window !== "undefined") {
-          document.cookie = "user_data=;path=/;max-age=0;SameSite=Lax";
-          localStorage.removeItem("univibe-profile");
-          localStorage.removeItem("user-storage");
-          localStorage.removeItem("user-profile-storage");
-          sessionStorage.clear();
-          signOut({ callbackUrl: `${window.location.origin}/login` });
-        }
+      if (newAccessToken) {
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return axiosInstance(originalRequest);
+      }
+
+      // Refresh returned null — session is unrecoverable, sign out
+      if (typeof window !== "undefined") {
+        document.cookie = "user_data=;path=/;max-age=0;SameSite=Lax";
+        localStorage.removeItem("univibe-profile");
+        localStorage.removeItem("user-storage");
+        localStorage.removeItem("user-profile-storage");
+        sessionStorage.clear();
+        signOut({ callbackUrl: `${window.location.origin}/login` });
       }
     }
 
