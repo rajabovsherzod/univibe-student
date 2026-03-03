@@ -10,12 +10,11 @@ declare module "next-auth" {
 }
 
 const axiosInstance = axios.create({
-  baseURL: typeof window !== "undefined" ? "" : API_CONFIG.baseURL,
+  baseURL: API_CONFIG.baseURL,
   timeout: 30_000,
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true,
 });
 
 // Mutex: prevents parallel refresh calls when multiple requests get 401 simultaneously
