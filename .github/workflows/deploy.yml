@@ -77,17 +77,17 @@ jobs:
             fi
 
             echo "Building Docker image..."
-            sudo docker build \
+            docker build \
               --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
               --build-arg NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL}" \
               -t "$IMAGE_NAME" .
 
             echo "Stopping existing container..."
-            sudo docker stop "$CONTAINER_NAME" 2>/dev/null || true
-            sudo docker rm "$CONTAINER_NAME" 2>/dev/null || true
+            docker stop "$CONTAINER_NAME" 2>/dev/null || true
+            docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
             echo "Starting new container..."
-            sudo docker run -d \
+            docker run -d \
               --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               -p 81:81 \
@@ -102,15 +102,15 @@ jobs:
               echo "Container is running!"
             else
               echo "ERROR: Container failed to start!"
-              sudo docker logs "$CONTAINER_NAME" --tail=50
+              docker logs "$CONTAINER_NAME" --tail=50
               exit 1
             fi
 
             echo "Cleaning up old images..."
-            sudo docker image prune -f || true
+            docker image prune -f || true
 
             echo "Deployment completed successfully!"
-            sudo docker ps | grep "$CONTAINER_NAME"
+            docker ps | grep "$CONTAINER_NAME"
 
       - name: Health Check
         uses: appleboy/ssh-action@v1.0.3
@@ -126,9 +126,9 @@ jobs:
             echo "Checking container status..."
             if sudo docker ps | grep -q "$CONTAINER_NAME"; then
               echo "Container is running!"
-              sudo docker ps | grep "$CONTAINER_NAME"
+              docker ps | grep "$CONTAINER_NAME"
             else
               echo "Container is not running!"
-              sudo docker logs "$CONTAINER_NAME" --tail=100
+              docker logs "$CONTAINER_NAME" --tail=100
               exit 1
             fi
