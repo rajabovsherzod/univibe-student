@@ -97,7 +97,7 @@ jobs:
             sleep 10
 
             # Verify container is running
-            if sudo docker ps | grep -q "$CONTAINER_NAME"; then
+            if docker ps | grep -q "$CONTAINER_NAME"; then
               echo "Container is running!"
             else
               echo "ERROR: Container failed to start!"
@@ -123,7 +123,7 @@ jobs:
             CONTAINER_NAME="univibe-student"
 
             echo "Checking container status..."
-            if sudo docker ps | grep -q "$CONTAINER_NAME"; then
+            if docker ps | grep -q "$CONTAINER_NAME"; then
               echo "Container is running!"
               docker ps | grep "$CONTAINER_NAME"
             else
