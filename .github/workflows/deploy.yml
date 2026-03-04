@@ -45,38 +45,27 @@ jobs:
             CONTAINER_NAME="univibe-student"
             IMAGE_NAME="univibe-student"
 
-            # Clone if first deployment (check for .git, not just directory)
-            if [ ! -d "$DEPLOY_DIR/.git" ]; then
-              echo "First deployment - cloning repository..."
-              # Backup .env if it exists in the directory
-              if [ -f "$DEPLOY_DIR/.env" ]; then
-                cp "$DEPLOY_DIR/.env" /tmp/univibe-student-env-backup
-              fi
-              rm -rf "$DEPLOY_DIR"
-              cd "$HOME"
-              git clone https://${GH_PAT}@github.com/rajabovsherzod/univibe-student.git univibe-student
-              cd "$DEPLOY_DIR"
-              # Restore .env if it was backed up
-              if [ -f /tmp/univibe-student-env-backup ]; then
-                mv /tmp/univibe-student-env-backup "$DEPLOY_DIR/.env"
-              fi
-            else
-              cd "$DEPLOY_DIR"
-              git remote set-url origin https://${GH_PAT}@github.com/rajabovsherzod/univibe-student.git
+            REPO_URL="https://${GH_PAT}@github.com/rajabovsherzod/univibe-student.git"
+
+            # Backup .env if it exists
+            if [ -f "$DEPLOY_DIR/.env" ]; then
+              cp "$DEPLOY_DIR/.env" /tmp/univibe-student-env-backup
             fi
 
-            echo "Fetching latest changes..."
-            git fetch origin
+            # Clean clone every deployment for reliability
+            rm -rf "$DEPLOY_DIR"
+            cd "$HOME"
+            echo "Cloning repository..."
+            git clone "$REPO_URL" univibe-student
+            cd "$DEPLOY_DIR"
 
-            # Ensure we are on main
-            CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
-            if [ "$CURRENT_BRANCH" != "main" ]; then
-              echo "Switching to main branch..."
-              git checkout main 2>/dev/null || git checkout -b main origin/main
+            # Restore .env
+            if [ -f /tmp/univibe-student-env-backup ]; then
+              mv /tmp/univibe-student-env-backup "$DEPLOY_DIR/.env"
             fi
 
-            echo "Pulling latest code..."
-            git reset --hard origin/main
+            echo "Checking out main..."
+            git checkout main
 
             # Load env variables from server .env file
             if [ -f "$DEPLOY_DIR/.env" ]; then
