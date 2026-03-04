@@ -41,6 +41,7 @@ jobs:
           script: |
             set -e
 
+
             DEPLOY_DIR="$HOME/univibe-student"
             CONTAINER_NAME="univibe-student"
             IMAGE_NAME="univibe-student"
