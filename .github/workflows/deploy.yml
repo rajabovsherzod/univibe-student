@@ -45,7 +45,6 @@ jobs:
             CONTAINER_NAME="univibe-student"
             IMAGE_NAME="univibe-student"
 
-
             # Clone if first deployment
             if [ ! -d "$DEPLOY_DIR" ]; then
               echo "First deployment - cloning repository..."
