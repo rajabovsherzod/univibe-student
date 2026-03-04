@@ -7,6 +7,7 @@ declare module "next-auth" {
   interface Session {
     accessToken?: string;
     refreshToken?: string;
+    accessTokenExpiry?: number;
   }
 }
 
@@ -18,42 +19,68 @@ const axiosInstance = axios.create({
   },
 });
 
-// Mutex: prevents parallel refresh calls when multiple requests get 401 simultaneously
+// ── Single-flight mutex ────────────────────────────────────────────────────────
+// Shared between request (proactive) and response (401 retry) interceptors so
+// that parallel requests never trigger more than one refresh at a time.
 let refreshPromise: Promise<string | null> | null = null;
 
+// Refresh proactively when < 2 min remain on the access token.
+const PROACTIVE_THRESHOLD_MS = 2 * 60 * 1000;
+
+// ── Request interceptor ────────────────────────────────────────────────────────
+// Attaches the Bearer token.
+// If the token is about to expire (< 2 min), silently refreshes it first so the
+// request goes out with a fresh token — no 401 round-trip needed.
 axiosInstance.interceptors.request.use(
   async (config) => {
-    if (typeof window !== "undefined") {
-      const session = await getSession();
-      if (session?.accessToken) {
-        config.headers.Authorization = `Bearer ${session.accessToken}`;
+    if (typeof window === "undefined") return config;
+
+    const session = await getSession();
+    if (!session?.accessToken) return config;
+
+    const expiry = session.accessTokenExpiry;
+    const timeLeft = expiry ? expiry - Date.now() : Infinity;
+
+    console.log("[Axios] Request interceptor running for:", config.url);
+    if (timeLeft < PROACTIVE_THRESHOLD_MS) {
+      console.log(`[Axios] Token nearing expiry (${timeLeft}ms left). Triggering proactive refresh.`);
+      if (!refreshPromise) {
+        refreshPromise = forceTokenRefresh().finally(() => {
+          refreshPromise = null;
+        });
       }
+      const newToken = await refreshPromise;
+      if (newToken) {
+        console.log("[Axios] Proactive refresh succeeded, attaching new token.");
+        config.headers.Authorization = `Bearer ${newToken}`;
+        return config;
+      }
+      console.warn("[Axios] Proactive refresh failed, continuing with old token.");
+    } else {
+      console.log(`[Axios] Token healthy (${timeLeft}ms left)`);
     }
+
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
+// ── Response interceptor ───────────────────────────────────────────────────────
+// On 401: attempt one token refresh, then retry the original request.
+// Logout only when the refresh itself fails (refresh token expired/invalid).
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      console.warn("[Axios] 401 Unauthorized encountered on request:", originalRequest.url);
       originalRequest._retry = true;
 
-      // Mutex: if a refresh is already in progress, wait for it
       if (!refreshPromise) {
-        refreshPromise = (async () => {
-          // forceTokenRefresh() calls update({ forceRefresh: true }) via the singleton
-          // registered in useActivityTracker. This triggers the NextAuth JWT callback
-          // on the server (trigger="update"), which calls refreshAccessToken() and
-          // stores the new token in the session cookie.
-          //
-          // Unlike getSession() (GET /api/auth/session), update() (POST) DOES trigger
-          // the JWT callback — so the expired token is actually refreshed server-side.
-          return forceTokenRefresh();
-        })().finally(() => {
+        console.log("[Axios] Initiating forceTokenRefresh() to recover from 401");
+        refreshPromise = forceTokenRefresh().finally(() => {
           refreshPromise = null;
         });
       }
@@ -61,11 +88,13 @@ axiosInstance.interceptors.response.use(
       const newAccessToken = await refreshPromise;
 
       if (newAccessToken) {
+        console.log("[Axios] 401 Recovery successful. Retrying original request to:", originalRequest.url);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       }
 
-      // Refresh returned null — session is unrecoverable, sign out
+      console.error("[Axios] 401 Recovery failed (new token is null). Forcing logout.");
+      // Refresh token is expired/invalid → clear local state and sign out.
       if (typeof window !== "undefined") {
         document.cookie = "user_data=;path=/;max-age=0;SameSite=Lax";
         localStorage.removeItem("univibe-profile");
@@ -77,7 +106,7 @@ axiosInstance.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default axiosInstance;

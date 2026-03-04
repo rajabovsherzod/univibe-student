@@ -1,49 +1,68 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner";
-import { CheckCircle, Clock, LogOut01 } from "@untitledui/icons";
-
-import { Input } from "@/components/base/input/input";
-import { Button } from "@/components/base/buttons/button";
-import { Select } from "@/components/base/select/select";
-import { FileUpload } from "@/components/application/file-upload/file-upload-base";
-import { DatePicker } from "@/components/application/date-picker/date-picker";
 import { parseDate } from "@internationalized/date";
+import Image from "next/image";
+import {
+  CameraIcon, BuildingsIcon, SignOutIcon, LockIcon, ClockIcon,
+} from "@phosphor-icons/react";
 import { useTranslation } from "@/lib/i18n/i18n";
 
-import { useStudentMe, useFaculties, useDegreeLevels, useYearLevels, useUpdateProfile } from "@/hooks/api/use-profile";
+import { Input } from "@/components/base/input/input";
+import { Select } from "@/components/base/select/select";
+import { DatePicker } from "@/components/application/date-picker/date-picker";
 
-const ProfileSchema = z.object({
-  name: z.string().min(1, "Ismni kiriting"),
-  surname: z.string().min(1, "Familiyani kiriting"),
-  profile_photo: z.any().optional(),
-  middle_name: z.string().optional(),
-  date_of_birth: z.string().min(1, "Tug'ilgan sanani kiriting"),
-  contact_phone_number: z.string().min(9, "Telefon raqamini kiriting"),
-  faculty_id: z.string().min(1, "Fakultetni tanlang"),
-  degree_level_id: z.string().min(1, "Darajani tanlang"),
-  year_level_id: z.string().min(1, "Kursni tanlang"),
-});
+import {
+  useStudentMe,
+  useFaculties,
+  useDegreeLevels,
+  useYearLevels,
+  useUpdateProfile,
+} from "@/hooks/api/use-profile";
+import { toHttps } from "@/utils/cx";
 
-type ProfileFormType = z.infer<typeof ProfileSchema>;
+type ProfileFormType = {
+  name: string;
+  surname: string;
+  middle_name: string;
+  university_student_id: string;
+  date_of_birth: string;
+  contact_phone_number: string;
+  faculty_id: string;
+  degree_level_id: string;
+  year_level_id: string;
+};
 
-export default function PersonalInfoPage() {
+// ── Section wrapper ───────────────────────────────────────────────────────────
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border-secondary bg-bg-secondary shadow-sm overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-border-secondary">
+        <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{title}</p>
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+export default function SetupProfilePage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { data: session, status: authStatus, update: updateSession } = useSession();
   const { data: me, isLoading: isLoadingMe } = useStudentMe();
   const updateProfile = useUpdateProfile();
-  const [success, setSuccess] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
 
-  // If the session is stale (admin approved/rejected the student after login),
-  // update the JWT so middleware allows the redirect on next navigation.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Already approved/rejected → go home
   useEffect(() => {
     if (!me) return;
     if (me.status === "approved" || me.status === "rejected") {
@@ -56,69 +75,88 @@ export default function PersonalInfoPage() {
     }
   }, [me]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const universityId = me?.university_public_id || (me?.university_id ? String(me.university_id) : undefined);
-  const { data: faculties, isLoading: isLoadingFaculties } = useFaculties(universityId);
-  const { data: degreeLevels, isLoading: isLoadingDegrees } = useDegreeLevels(universityId);
-  const { data: yearLevels, isLoading: isLoadingYears } = useYearLevels(universityId);
+  const universityId =
+    me?.university_public_id ||
+    (me?.university_id ? String(me.university_id) : undefined);
 
-  const form = useForm<ProfileFormType>({
-    resolver: zodResolver(ProfileSchema),
+  const { data: faculties,    isLoading: isLoadingFaculties } = useFaculties(universityId);
+  const { data: degreeLevels, isLoading: isLoadingDegrees   } = useDegreeLevels(universityId);
+  const { data: yearLevels,   isLoading: isLoadingYears     } = useYearLevels(universityId);
+
+  // Schema defined inside component to use current language for validation messages
+  const profileSchema = z.object({
+    name:                   z.string().min(1, t("validation.name")),
+    surname:                z.string().min(1, t("validation.surname")),
+    middle_name:            z.string().min(1, t("validation.middleName")),
+    university_student_id:  z.string().min(1, t("validation.studentId")),
+    date_of_birth:          z.string().min(1, t("validation.dob")),
+    contact_phone_number:   z.string().min(9, t("validation.phone")),
+    faculty_id:             z.string().min(1, t("validation.faculty")),
+    degree_level_id:        z.string().min(1, t("validation.degree")),
+    year_level_id:          z.string().min(1, t("validation.year")),
+  });
+
+  const { control, handleSubmit, formState, setValue, getValues } = useForm<ProfileFormType>({
+    resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: "",
-      surname: "",
-      profile_photo: undefined,
-      middle_name: "",
-      date_of_birth: "",
-      contact_phone_number: "",
-      faculty_id: "",
-      degree_level_id: "",
-      year_level_id: ""
+      name: "", surname: "", middle_name: "", university_student_id: "",
+      date_of_birth: "", contact_phone_number: "",
+      faculty_id: "", degree_level_id: "", year_level_id: "",
     },
   });
 
-  // Pre-fill name/surname: from me data (API) first, then fallback to session full_name
-  // for not_found users where /student/me returns 404 and me is undefined
+  // Pre-fill name/surname from profile or session
   useEffect(() => {
-    const currentName = form.getValues("name");
-    const currentSurname = form.getValues("surname");
-    if (me?.name && !currentName) form.setValue("name", me.name);
-    if (me?.surname && !currentSurname) form.setValue("surname", me.surname);
+    const v = getValues();
+    if (me?.name    && !v.name)    setValue("name",    me.name);
+    if (me?.surname && !v.surname) setValue("surname", me.surname);
     if (!me) {
       const parts = (session?.user?.name || "").trim().split(/\s+/);
-      if (!currentName && parts[0]) form.setValue("name", parts[0]);
-      if (!currentSurname && parts[1]) form.setValue("surname", parts.slice(1).join(" "));
+      if (!v.name    && parts[0]) setValue("name",    parts[0]);
+      if (!v.surname && parts[1]) setValue("surname", parts.slice(1).join(" "));
     }
   }, [me, session?.user?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setPhotoFile(f);
+    setPhotoPreview(URL.createObjectURL(f));
+  };
+
   const onSubmit = async (data: ProfileFormType) => {
     try {
-      const formData = new FormData();
-      formData.append("name", data.name.trim());
-      formData.append("surname", data.surname.trim());
-      if (data.profile_photo instanceof File) {
-        formData.append("profile_photo", data.profile_photo);
-      }
-      if (data.middle_name) formData.append("middle_name", data.middle_name);
-      formData.append("date_of_birth", data.date_of_birth);
-      formData.append("contact_phone_number", data.contact_phone_number);
-      formData.append("faculty_id", data.faculty_id);
-      formData.append("degree_level_id", data.degree_level_id);
-      formData.append("year_level_id", data.year_level_id);
-      await updateProfile.mutateAsync(formData);
-      // Status is now "waited" on the backend — update session so middleware
-      // knows the correct status before any next navigation.
+      const fd = new FormData();
+      fd.append("name",                   data.name.trim());
+      fd.append("surname",                data.surname.trim());
+      fd.append("middle_name",            data.middle_name.trim());
+      fd.append("university_student_id",  data.university_student_id.trim());
+      fd.append("date_of_birth",          data.date_of_birth);
+      fd.append("contact_phone_number",   data.contact_phone_number);
+      fd.append("faculty_id",             data.faculty_id);
+      fd.append("degree_level_id",        data.degree_level_id);
+      fd.append("year_level_id",          data.year_level_id);
+      if (photoFile) fd.append("profile_photo", photoFile);
+
+      await updateProfile.mutateAsync(fd);
       await updateSession({ studentStatus: "waited" });
-      setSuccess(true);
-      toast.success(t("common.success"));
-    } catch (e: any) {
-      const errData = e?.response?.data;
-      const msg = errData?.detail || errData?.message || errData || t("common.error");
-      toast.error(t("common.error"), { description: typeof msg === "string" ? msg : JSON.stringify(msg, null, 2) });
+      router.push("/waiting-room");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: Record<string, unknown> | string } };
+      const errData = err?.response?.data;
+      const msg =
+        (errData && typeof errData === "object" && (
+          ("detail"  in errData ? errData.detail  : undefined) ||
+          ("message" in errData ? errData.message : undefined)
+        )) || errData || t("setup.saveError");
+      const { toast } = await import("sonner");
+      toast.error(t("common.error"), {
+        description: typeof msg === "string" ? msg : JSON.stringify(msg, null, 2),
+      });
     }
   };
 
   const handleSignOut = () => {
-    try { localStorage.removeItem("univibe-student-status"); } catch { }
     try { localStorage.removeItem("univibe-profile"); } catch { }
     try { localStorage.removeItem("user-storage"); } catch { }
     try { localStorage.removeItem("user-profile-storage"); } catch { }
@@ -126,203 +164,274 @@ export default function PersonalInfoPage() {
     signOut({ callbackUrl: `${window.location.origin}/login` });
   };
 
-  const facultyItems = (faculties || []).map((f) => ({ id: f.public_id, label: f.name }));
-  const degreeItems = (degreeLevels || []).map((d) => ({ id: d.public_id, label: d.name }));
-  const yearItems = (yearLevels || []).map((y) => ({ id: y.public_id, label: y.name }));
+  const isSubmitting = updateProfile.isPending;
 
+  // Display values for the hero card
+  const displayName = me?.name || me?.surname
+    ? `${me?.name || ""} ${me?.surname || ""}`.trim()
+    : (session?.user?.name || "").replace(/\bUser\b/gi, "").trim() || "Talaba";
+  const displayEmail = me?.email || session?.user?.email;
+  const universityName = me?.university_name;
+  const avatarSrc = photoPreview || toHttps(me?.profile_photo_url);
+  const initial = displayName.charAt(0).toUpperCase();
+
+  const facultyItems    = (faculties    || []).map(f => ({ id: f.public_id, label: f.name }));
+  const degreeItems     = (degreeLevels || []).map(d => ({ id: d.public_id, label: d.name }));
+  const yearItems       = (yearLevels   || []).map(y => ({ id: y.public_id, label: y.name }));
+
+  // ── Skeleton ────────────────────────────────────────────────────────────────
   if (authStatus === "loading" || isLoadingMe) {
     return (
-      <div className="flex flex-col gap-6 w-full animate-pulse-fast">
-        <div className="h-40 sm:h-48 w-full rounded-2xl bg-bg-secondary border border-border-secondary skeleton-shimmer" />
-        <div className="rounded-2xl bg-bg-secondary border border-border-secondary p-5 sm:p-7 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-            <div className="h-12 rounded-xl skeleton-shimmer" />
-            <div className="h-12 rounded-xl skeleton-shimmer" />
-            <div className="sm:col-span-2 h-12 rounded-xl skeleton-shimmer" />
-            <div className="h-12 rounded-xl skeleton-shimmer" />
-            <div className="h-12 rounded-xl skeleton-shimmer" />
+      <div className="space-y-4 pb-10 animate-pulse">
+        <div className="h-12 rounded-2xl bg-bg-secondary border border-border-secondary" />
+        <div className="rounded-2xl border border-border-secondary overflow-hidden">
+          <div className="h-36 bg-brand-600/30" />
+        </div>
+        <div className="rounded-2xl border border-border-secondary bg-bg-secondary p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-11 rounded-lg skeleton-shimmer" />
+            ))}
           </div>
-          <div className="h-12 w-32 rounded-xl skeleton-shimmer mt-2" />
+        </div>
+        <div className="rounded-2xl border border-border-secondary bg-bg-secondary p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-11 rounded-lg skeleton-shimmer" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* Premium Header */}
-      <div className="relative pt-10 pb-12 px-6 sm:px-10 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 overflow-hidden shadow-sm rounded-2xl mt-2 border border-brand-800/50">
-        {/* Background Patterns */}
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none select-none">
-          <svg width="240" height="240" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-        </div>
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_100%,rgba(255,255,255,0.04)_0%,transparent_50%)] pointer-events-none select-none" />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-10">
 
-        <div className="relative z-10 flex flex-col gap-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm w-fit mb-2">
-            <div className="size-2 rounded-full bg-warning-400 animate-pulse" />
-            <span className="text-xs font-semibold text-white tracking-wide uppercase">
-              {t("profile.statusWaited")}
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            {t("personalInfo.title")}
-          </h1>
-          <p className="text-brand-100/90 text-sm sm:text-base max-w-xl">
-            {t("personalInfo.subtitle")}
+      {/* ── Status banner ── */}
+      <div className="flex items-center gap-3.5 rounded-2xl border border-border-secondary bg-bg-secondary shadow-xs px-4 py-3.5">
+        <div className="size-9 rounded-xl bg-brand-50 dark:bg-brand-500/10 ring-1 ring-brand-200/60 dark:ring-brand-500/25 flex items-center justify-center shrink-0">
+          <ClockIcon size={17} weight="fill" className="text-brand-600 dark:text-brand-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-fg-primary">{t("setup.bannerTitle")}</p>
+          <p className="text-xs text-fg-tertiary leading-relaxed mt-0.5">
+            {t("setup.bannerDesc")}
           </p>
         </div>
+        <div className="shrink-0 hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold bg-brand-500 dark:bg-brand-500 text-white dark:text-warning-300 ring-1 ring-warning-200 dark:ring-warning-500/25">
+          <span className="size-1.5 rounded-full bg-white animate-pulse" />
+          {t("setup.bannerBadge")}
+        </div>
       </div>
 
-      <div className="rounded-2xl bg-bg-secondary border border-border-secondary shadow-sm p-5 sm:p-7">
-        {success ? (
-          <div className="flex flex-col items-center text-center py-10">
-            <div className="mb-6 flex size-24 items-center justify-center rounded-full bg-success-50 dark:bg-success-500/10 border-[8px] border-success-100 dark:border-success-500/20">
-              <CheckCircle className="size-12 text-success-600 dark:text-success-400" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-primary mb-3">{t("personalInfo.successTitle")}</h2>
-            <p className="text-sm sm:text-base text-tertiary leading-relaxed max-w-md">
-              {t("personalInfo.successDesc")}
-            </p>
-          </div>
-        ) : me?.status === "waited" && !updateProfile.isPending ? (
-          <div className="flex flex-col items-center text-center py-10">
-            <div className="mb-6 flex size-24 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-500/10 border-[8px] border-brand-100 dark:border-brand-500/20">
-              <Clock className="size-12 text-brand-600 dark:text-brand-400" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-primary mb-3">{t("waiting.title")}</h2>
-            <p className="text-sm sm:text-base text-tertiary leading-relaxed max-w-md">
-              {t("waiting.description")}
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-            {/* Name row */}
-            <div className="sm:col-span-1">
-              <Controller name="name" control={form.control} render={({ field }) => (
-                <Input {...field} label={`${t("auth.name")} *`} placeholder="Alisher" isInvalid={!!form.formState.errors.name} hint={form.formState.errors.name?.message} isDisabled={updateProfile.isPending} />
-              )} />
-            </div>
-            <div className="sm:col-span-1">
-              <Controller name="surname" control={form.control} render={({ field }) => (
-                <Input {...field} label={`${t("auth.surname")} *`} placeholder="Toshmatov" isInvalid={!!form.formState.errors.surname} hint={form.formState.errors.surname?.message} isDisabled={updateProfile.isPending} />
-              )} />
-            </div>
+      {/* ── Hero card ── */}
+      <div className="rounded-2xl border border-border-secondary bg-bg-secondary shadow-sm overflow-hidden">
+        <div className="relative bg-gradient-to-br from-brand-600 via-brand-500 to-brand-700 px-5 sm:px-6 py-6 sm:py-8">
+          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_30%_20%,white_1px,transparent_1px),radial-gradient(circle_at_70%_80%,white_1px,transparent_1px)] bg-[length:24px_24px]" />
 
-            {/* Profile photo */}
-            <div className="col-span-1 sm:col-span-2">
-              <Controller name="profile_photo" control={form.control} render={({ field: { onChange } }) => (
-                <div className="flex flex-col gap-1.5 w-full">
-                  <label className="text-sm font-medium text-fg-secondary">{t("personalInfo.photoLabel")}</label>
-                  <FileUpload.Root accept="image/*" maxFiles={1}>
-                    <FileUpload.DropZone
-                      accept="image/*"
-                      hint="Iltimos faqat rasm (PNG, JPEG) yuklang"
-                      onDropFiles={(files) => {
-                        const newFiles = Array.from(files);
-                        if (newFiles.length > 0) {
-                          const file = newFiles[0];
-                          onChange(file);
-                          setUploadedFiles([{
-                            id: Math.random().toString(),
-                            name: file.name,
-                            size: file.size,
-                            progress: 100
-                          }]);
-                        }
-                      }}
-                    />
-                    {uploadedFiles.length > 0 && (
-                      <FileUpload.List>
-                        {uploadedFiles.map((file) => (
-                          <FileUpload.ListItemProgressBar
-                            key={file.id}
-                            name={file.name}
-                            size={file.size}
-                            progress={file.progress}
-                            onDelete={() => {
-                              onChange(undefined);
-                              setUploadedFiles([]);
-                            }}
-                          />
-                        ))}
-                      </FileUpload.List>
-                    )}
-                  </FileUpload.Root>
-                  {form.formState.errors.profile_photo && (
-                    <p className="text-xs text-error-600">{form.formState.errors.profile_photo.message as string}</p>
-                  )}
-                </div>
-              )} />
-            </div>
-            <div className="col-span-1 sm:col-span-2">
-              <Controller name="middle_name" control={form.control} render={({ field }) => (
-                <Input {...field} label={t("profile.middleName") || "Sharifingiz"} placeholder="Sharifingizni kiriting" isInvalid={!!form.formState.errors.middle_name} hint={form.formState.errors.middle_name?.message} isDisabled={updateProfile.isPending} />
-              )} />
-            </div>
-            <div className="sm:col-span-1">
-              <Controller name="date_of_birth" control={form.control} render={({ field }) => (
-                <div className="flex flex-col gap-1.5 w-full">
-                  <label className="text-sm font-medium text-fg-secondary">{t("personalInfo.dob")}</label>
-                  <DatePicker
-                    value={field.value ? parseDate(field.value) : null}
-                    onChange={(v) => field.onChange(v ? v.toString() : "")}
+          <div className="relative z-10 flex flex-col items-center sm:flex-row sm:items-center gap-4 sm:gap-5">
+            {/* Clickable avatar */}
+            <div className="relative shrink-0">
+              <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-white/20 ring-[3px] ring-white/30">
+                {avatarSrc ? (
+                  <Image
+                    src={avatarSrc}
+                    alt={displayName}
+                    width={96}
+                    height={96}
+                    className="size-full object-cover"
+                    unoptimized={!!photoPreview}
                   />
-                  {form.formState.errors.date_of_birth && (
-                    <p className="text-xs text-error-600">{form.formState.errors.date_of_birth.message}</p>
-                  )}
-                </div>
-              )} />
+                ) : (
+                  <div className="size-full flex items-center justify-center text-white font-bold text-3xl select-none">
+                    {initial}
+                  </div>
+                )}
+              </div>
+              {/* Camera overlay */}
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                <CameraIcon size={22} weight="fill" className="text-white" />
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
             </div>
-            <div className="sm:col-span-1">
-              <Controller name="contact_phone_number" control={form.control} render={({ field }) => (
-                <Input {...field} label={t("personalInfo.phone")} placeholder={t("personalInfo.phonePlaceholder")} type="tel" isInvalid={!!form.formState.errors.contact_phone_number} hint={form.formState.errors.contact_phone_number?.message} isDisabled={updateProfile.isPending} />
-              )} />
+
+            {/* Name + info */}
+            <div className="text-center sm:text-left flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-white leading-tight truncate">
+                {displayName}
+              </h1>
+              <div className="mt-1.5 space-y-0.5">
+                {displayEmail && (
+                  <p className="text-sm text-white/70">{displayEmail}</p>
+                )}
+                {universityName && (
+                  <p className="flex items-center justify-center sm:justify-start gap-1.5 text-sm text-white/80">
+                    <BuildingsIcon size={14} className="text-white/60 shrink-0" />
+                    {universityName}
+                  </p>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-white/50 italic">
+                {t("setup.avatarHint")}
+              </p>
             </div>
-            <div className="col-span-1 sm:col-span-2">
-              <Controller name="faculty_id" control={form.control} render={({ field }) => (
-                <Select label={t("personalInfo.faculty")} placeholder={t("personalInfo.facultyPlaceholder")} items={facultyItems} selectedKey={field.value || null} onSelectionChange={(key) => field.onChange(String(key))} isDisabled={isLoadingFaculties || updateProfile.isPending} isInvalid={!!form.formState.errors.faculty_id} hint={form.formState.errors.faculty_id?.message}>
-                  {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
-                </Select>
-              )} />
-            </div>
-            <div className="sm:col-span-1">
-              <Controller name="degree_level_id" control={form.control} render={({ field }) => (
-                <Select label={t("personalInfo.degree")} placeholder={t("personalInfo.degreePlaceholder")} items={degreeItems} selectedKey={field.value || null} onSelectionChange={(key) => field.onChange(String(key))} isDisabled={isLoadingDegrees || updateProfile.isPending} isInvalid={!!form.formState.errors.degree_level_id} hint={form.formState.errors.degree_level_id?.message}>
-                  {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
-                </Select>
-              )} />
-            </div>
-            <div className="sm:col-span-1">
-              <Controller name="year_level_id" control={form.control} render={({ field }) => (
-                <Select label={t("personalInfo.year")} placeholder={t("personalInfo.yearPlaceholder")} items={yearItems} selectedKey={field.value || null} onSelectionChange={(key) => field.onChange(String(key))} isDisabled={isLoadingYears || updateProfile.isPending} isInvalid={!!form.formState.errors.year_level_id} hint={form.formState.errors.year_level_id?.message}>
-                  {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
-                </Select>
-              )} />
-            </div>
-            <div className="col-span-1 sm:col-span-2 mt-4 flex justify-end">
-              <Button type="submit" size="md" isLoading={updateProfile.isPending} isDisabled={updateProfile.isPending}>
-                {t("personalInfo.saveButton")}
-              </Button>
-            </div>
-          </form>
-        )}
+          </div>
+        </div>
       </div>
 
-      {/* Sign out — accessible on all screen sizes when stuck on this page */}
-      <div className="flex justify-center pb-2">
+      {/* ── Shaxsiy ma'lumotlar ── */}
+      <Section title={t("profile.personalInfoSection")}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+          <Controller name="name" control={control}
+            render={({ field }) => (
+              <Input {...field} label={`${t("auth.name")} *`} placeholder="Alisher"
+                isInvalid={!!formState.errors.name}
+                hint={formState.errors.name?.message}
+                isDisabled={isSubmitting} />
+            )}
+          />
+          <Controller name="surname" control={control}
+            render={({ field }) => (
+              <Input {...field} label={`${t("auth.surname")} *`} placeholder="Toshmatov"
+                isInvalid={!!formState.errors.surname}
+                hint={formState.errors.surname?.message}
+                isDisabled={isSubmitting} />
+            )}
+          />
+          <Controller name="middle_name" control={control}
+            render={({ field }) => (
+              <Input {...field} label={`${t("profile.middleName")} *`} placeholder="Baxtiyorovich"
+                isInvalid={!!formState.errors.middle_name}
+                hint={formState.errors.middle_name?.message}
+                isDisabled={isSubmitting} />
+            )}
+          />
+          <Controller name="contact_phone_number" control={control}
+            render={({ field }) => (
+              <Input {...field} label={`${t("personalInfo.phone")} *`} placeholder="+998901234567" type="tel"
+                isInvalid={!!formState.errors.contact_phone_number}
+                hint={formState.errors.contact_phone_number?.message}
+                isDisabled={isSubmitting} />
+            )}
+          />
+          <Controller name="date_of_birth" control={control}
+            render={({ field }) => (
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-sm font-medium text-fg-primary">
+                  {t("personalInfo.dob")} *
+                </label>
+                <DatePicker
+                  value={field.value ? parseDate(field.value) : null}
+                  onChange={(v) => field.onChange(v ? v.toString() : "")}
+                />
+                {formState.errors.date_of_birth && (
+                  <p className="text-xs text-error-600">{formState.errors.date_of_birth.message}</p>
+                )}
+              </div>
+            )}
+          />
+        </div>
+      </Section>
+
+      {/* ── Akademik ma'lumotlar ── */}
+      <Section title={t("profile.academicSection")}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+          {/* Student ID with lock note */}
+          <div className="sm:col-span-2 space-y-1.5">
+            <Controller name="university_student_id" control={control}
+              render={({ field }) => (
+                <Input {...field} label={`${t("profile.studentId")} *`} placeholder="21060101"
+                  isInvalid={!!formState.errors.university_student_id}
+                  hint={formState.errors.university_student_id?.message}
+                  isDisabled={isSubmitting} />
+              )}
+            />
+            <div className="flex items-center gap-1.5 text-xs text-fg-tertiary">
+              <LockIcon size={12} className="shrink-0" />
+              <span>{t("setup.lockNote")}</span>
+            </div>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Controller name="faculty_id" control={control}
+              render={({ field }) => (
+                <Select
+                  label={`${t("personalInfo.faculty")} *`}
+                  placeholder={t("personalInfo.facultyPlaceholder")}
+                  items={facultyItems}
+                  selectedKey={field.value || null}
+                  onSelectionChange={(key) => field.onChange(String(key))}
+                  isDisabled={isLoadingFaculties || isSubmitting}
+                  isInvalid={!!formState.errors.faculty_id}
+                  hint={formState.errors.faculty_id?.message}
+                >
+                  {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+                </Select>
+              )}
+            />
+          </div>
+
+          <Controller name="degree_level_id" control={control}
+            render={({ field }) => (
+              <Select
+                label={`${t("personalInfo.degree")} *`}
+                placeholder={t("personalInfo.degreePlaceholder")}
+                items={degreeItems}
+                selectedKey={field.value || null}
+                onSelectionChange={(key) => field.onChange(String(key))}
+                isDisabled={isLoadingDegrees || isSubmitting}
+                isInvalid={!!formState.errors.degree_level_id}
+                hint={formState.errors.degree_level_id?.message}
+              >
+                {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+              </Select>
+            )}
+          />
+
+          <Controller name="year_level_id" control={control}
+            render={({ field }) => (
+              <Select
+                label={`${t("personalInfo.year")} *`}
+                placeholder={t("personalInfo.yearPlaceholder")}
+                items={yearItems}
+                selectedKey={field.value || null}
+                onSelectionChange={(key) => field.onChange(String(key))}
+                isDisabled={isLoadingYears || isSubmitting}
+                isInvalid={!!formState.errors.year_level_id}
+                hint={formState.errors.year_level_id?.message}
+              >
+                {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+              </Select>
+            )}
+          />
+        </div>
+      </Section>
+
+      {/* ── Submit + Sign out ── */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
         <button
           type="button"
           onClick={handleSignOut}
-          className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-error-600 dark:text-error-400 hover:text-error-700 dark:hover:text-error-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-500 text-white px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:ring-offset-2 w-full sm:w-auto"
         >
-          <LogOut01 className="size-4" />
-          {t("profile.logoutButton") || "Tizimdan chiqish"}
+          <SignOutIcon size={16} weight="bold" />
+          {t("profile.logoutButton")}
+        </button>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex w-full sm:w-auto min-w-[220px] justify-center items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 text-white px-6 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-50"
+        >
+          {isSubmitting ? t("common.loading") : t("personalInfo.saveButton")}
         </button>
       </div>
-    </div>
+    </form>
   );
 }

@@ -72,12 +72,35 @@
   "waiting": {
     "title": "Under Review",
     "description": "Your information is being reviewed by university staff. You will get full access once approved.",
+    "badgeLabel": "Under Review",
     "nameLabel": "Name",
     "emailLabel": "Email",
     "universityLabel": "University",
     "statusLabel": "Status",
     "statusWaited": "Pending",
     "switchAccount": "Sign in with another account"
+  },
+  "setup": {
+    "bannerTitle": "Complete your profile",
+    "bannerDesc": "Enter all information correctly. It will be used for verification.",
+    "bannerBadge": "Profile setup",
+    "avatarHint": "Click the avatar above to set a photo",
+    "lockNote": "Cannot be changed after approval. Enter correctly.",
+    "actionsSection": "Actions",
+    "savedSuccess": "Profile updated",
+    "savedDesc": "Your information has been saved.",
+    "saveError": "Error saving information"
+  },
+  "validation": {
+    "name": "Enter your first name",
+    "surname": "Enter your last name",
+    "middleName": "Enter middle name",
+    "studentId": "Enter student ID",
+    "dob": "Enter date of birth",
+    "phone": "Enter phone number",
+    "faculty": "Select faculty",
+    "degree": "Select degree",
+    "year": "Select year"
   },
   "profile": {
     "title": "Profile",

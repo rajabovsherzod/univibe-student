@@ -41,21 +41,34 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz";
 // proactively refreshes before the actual expiry.
 const ACCESS_TOKEN_LIFETIME_MS = 14 * 60 * 1000; // 14 minutes
 
-async function refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: number } | null> {
+async function refreshAccessToken(
+  refreshToken: string
+): Promise<{ accessToken: string; refreshToken?: string; expiresAt: number } | null> {
   try {
+    console.log(`[NextAuth] Refreshing backend token using refresh: ${refreshToken.substring(0, 10)}...`);
     const res = await fetch(`${BASE_URL}/api/v1/user/auth/token/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh: refreshToken }),
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data?.access) return null;
+    if (!res.ok) {
+      console.error(`[NextAuth] Backend refresh failed with status ${res.status}`);
+      return null;
+    }
+    const data = await res.json() as Record<string, unknown>;
+    if (!data?.access) {
+      console.error(`[NextAuth] Backend refresh succeeded but missing 'access' field.`);
+      return null;
+    }
+    console.log(`[NextAuth] Backend refresh OK, got new access token.`);
     return {
       accessToken: data.access as string,
+      // Handle refresh token rotation: if backend returns new refresh token, store it.
+      ...(data.refresh ? { refreshToken: data.refresh as string } : {}),
       expiresAt: Date.now() + ACCESS_TOKEN_LIFETIME_MS,
     };
-  } catch {
+  } catch (err) {
+    console.error(`[NextAuth] refreshAccessToken network error:`, err);
     return null;
   }
 }
@@ -143,6 +156,7 @@ export const authOptions: NextAuthOptions = {
 
       // Initial sign in — populate token from user object
       if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const u = user as any;
         return {
           ...token,
@@ -162,14 +176,28 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
+      console.warn(`[NextAuth] JWT expiresAt (${token.expiresAt}) has passed or no expiry. Attempting server-side refresh...`);
       // Access token expired — attempt server-side refresh
       if (token.refreshToken) {
         const refreshed = await refreshAccessToken(token.refreshToken);
         if (refreshed) {
-          return { ...token, ...refreshed, error: undefined };
+          console.log(`[NextAuth] Successfully refreshed token during JWT callback.`);
+          return {
+            ...token,
+            accessToken: refreshed.accessToken,
+            expiresAt: refreshed.expiresAt,
+            // Only override refreshToken if backend returned a new one (rotation).
+            // Spreading `refreshed` directly would wipe token.refreshToken when
+            // refreshed.refreshToken is undefined.
+            ...(refreshed.refreshToken ? { refreshToken: refreshed.refreshToken } : {}),
+            error: undefined,
+          };
         }
+      } else {
+        console.warn(`[NextAuth] JWT expired but no refreshToken exists.`);
       }
 
+      console.error(`[NextAuth] Refresh attempt failed, returning RefreshAccessTokenError`);
       // Refresh failed — mark session as expired; middleware will redirect to login
       return { ...token, error: "RefreshAccessTokenError" };
     },

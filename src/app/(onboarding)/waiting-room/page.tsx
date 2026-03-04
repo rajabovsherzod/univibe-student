@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { parseDate } from "@internationalized/date";
 import {
   UserIcon, PhoneIcon, CalendarBlankIcon, GraduationCapIcon,
-  BuildingsIcon, PencilSimpleIcon, CheckIcon, CameraIcon, ClockIcon, XIcon, SignOutIcon,
+  BuildingsIcon, PencilSimpleIcon, ClockIcon, SignOutIcon, CameraIcon,
+  IdentificationCardIcon, LockIcon,
 } from "@phosphor-icons/react";
 import type { ComponentType } from "react";
 import Image from "next/image";
@@ -17,7 +18,6 @@ import {
   useStudentMe, useFaculties, useDegreeLevels, useYearLevels, useUpdateProfile,
 } from "@/hooks/api/use-profile";
 import { Input } from "@/components/base/input/input";
-import { Button } from "@/components/base/buttons/button";
 import { Select } from "@/components/base/select/select";
 import { DatePicker } from "@/components/application/date-picker/date-picker";
 import { useTranslation } from "@/lib/i18n/i18n";
@@ -58,6 +58,7 @@ function InfoRow({
   label: string;
   value?: string | null;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-4 py-3.5 border-b border-border-secondary last:border-0">
       <div className="size-9 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
@@ -68,7 +69,7 @@ function InfoRow({
           {label}
         </p>
         <p className="text-base font-semibold text-fg-primary leading-snug">
-          {value ?? <span className="font-normal text-fg-tertiary italic">Kiritilmagan</span>}
+          {value ?? <span className="font-normal text-fg-tertiary italic">{t("common.loading").replace("...", "") || "—"}</span>}
         </p>
       </div>
     </div>
@@ -184,7 +185,7 @@ export default function WaitingRoomPage() {
       if (photoFile) fd.append("profile_photo", photoFile);
 
       await updateProfile(fd);
-      toast.success("Profil yangilandi", { description: "Ma'lumotlaringiz saqlandi." });
+      toast.success(t("setup.savedSuccess"), { description: t("setup.savedDesc") });
       setEditing(false);
       setPhotoFile(null);
       setPhotoPreview(null);
@@ -193,8 +194,8 @@ export default function WaitingRoomPage() {
       const msg =
         (err?.response?.data?.detail as string) ||
         (Object.values(err?.response?.data || {}).flat().find((x): x is string => typeof x === "string")) ||
-        "Ma'lumotlarni saqlashda xatolik";
-      toast.error("Xatolik", { description: String(msg) });
+        t("setup.saveError");
+      toast.error(t("common.error"), { description: String(msg) });
     } finally {
       setSaving(false);
     }
@@ -227,7 +228,7 @@ export default function WaitingRoomPage() {
         </div>
         <div className="shrink-0 hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 ring-1 ring-brand-200 dark:ring-brand-500/25">
           <span className="size-1.5 rounded-full bg-brand-500 animate-pulse" />
-          Tekshiruvda
+          {t("waiting.badgeLabel")}
         </div>
       </div>
 
@@ -290,16 +291,6 @@ export default function WaitingRoomPage() {
                     <h1 className="text-lg sm:text-xl font-bold text-white leading-tight truncate">
                       {displayName}
                     </h1>
-                    {!editing && (
-                      <button
-                        type="button"
-                        onClick={startEdit}
-                        aria-label="Tahrirlash"
-                        className="shrink-0 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                      >
-                        <PencilSimpleIcon size={14} weight="bold" />
-                      </button>
-                    )}
                   </>
                 )}
               </div>
@@ -345,9 +336,10 @@ export default function WaitingRoomPage() {
 
             <Section title={t("profile.academicSection")}>
               {isPending
-                ? Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)
+                ? Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
                 : (
                   <>
+                    <InfoRow icon={IdentificationCardIcon} label={t("profile.studentId")} value={profile?.university_student_id} />
                     <InfoRow icon={GraduationCapIcon} label={t("profile.faculty")} value={profile?.faculty_name} />
                     <InfoRow icon={GraduationCapIcon} label={t("profile.direction")} value={profile?.degree_level_name} />
                     <InfoRow icon={GraduationCapIcon} label={t("profile.year")} value={profile?.year_level_name} />
@@ -356,15 +348,23 @@ export default function WaitingRoomPage() {
             </Section>
           </div>
 
-          {/* Sign out */}
-          <Section title={t("profile.logoutSection")}>
-            <div className="py-4">
+          {/* Harakatlar */}
+          <Section title={t("setup.actionsSection")}>
+            <div className="py-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={startEdit}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 text-white px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+              >
+                <PencilSimpleIcon size={16} weight="bold" />
+                {t("profile.editButton")}
+              </button>
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-error-600 dark:text-error-400 hover:text-error-700 dark:hover:text-error-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-500 text-white px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:ring-offset-2"
               >
-                <SignOutIcon size={16} />
+                <SignOutIcon size={16} weight="bold" />
                 {t("profile.logoutButton")}
               </button>
             </div>
@@ -376,7 +376,7 @@ export default function WaitingRoomPage() {
           <Section title={t("profile.personalInfoSection")}>
             <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
               <Controller name="name" control={control}
-                rules={{ required: "Ism majburiy" }}
+                rules={{ required: t("validation.name") }}
                 render={({ field }) => (
                   <Input {...field} label={`${t("auth.name")} *`} placeholder="Alisher"
                     isInvalid={!!formState.errors.name}
@@ -384,7 +384,7 @@ export default function WaitingRoomPage() {
                 )}
               />
               <Controller name="surname" control={control}
-                rules={{ required: "Familiya majburiy" }}
+                rules={{ required: t("validation.surname") }}
                 render={({ field }) => (
                   <Input {...field} label={`${t("auth.surname")} *`} placeholder="Toshmatov"
                     isInvalid={!!formState.errors.surname}
@@ -392,24 +392,34 @@ export default function WaitingRoomPage() {
                 )}
               />
               <Controller name="middle_name" control={control}
+                rules={{ required: t("validation.middleName") }}
                 render={({ field }) => (
-                  <Input {...field} label={t("profile.middleName")} placeholder="Baxtiyorovich" />
+                  <Input {...field} label={`${t("profile.middleName")} *`} placeholder="Baxtiyorovich"
+                    isInvalid={!!formState.errors.middle_name}
+                    hint={formState.errors.middle_name?.message} />
                 )}
               />
               <Controller name="contact_phone_number" control={control}
+                rules={{ required: t("validation.phone") }}
                 render={({ field }) => (
-                  <Input {...field} label={t("profile.phone")} placeholder="+998901234567" type="tel" />
+                  <Input {...field} label={`${t("profile.phone")} *`} placeholder="+998901234567" type="tel"
+                    isInvalid={!!formState.errors.contact_phone_number}
+                    hint={formState.errors.contact_phone_number?.message} />
                 )}
               />
               <Controller name="date_of_birth" control={control}
+                rules={{ required: t("validation.dob") }}
                 render={({ field }) => (
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-fg-primary">{t("profile.dob")}</label>
+                    <label className="block text-sm font-medium text-fg-primary">{t("profile.dob")} *</label>
                     <DatePicker
                       value={field.value ? parseDate(field.value) : null}
                       onChange={(v) => field.onChange(v ? v.toString() : "")}
                       aria-label={t("profile.dob")}
                     />
+                    {formState.errors.date_of_birth && (
+                      <p className="text-xs text-error-600">{formState.errors.date_of_birth.message}</p>
+                    )}
                   </div>
                 )}
               />
@@ -418,37 +428,51 @@ export default function WaitingRoomPage() {
 
           <Section title={t("profile.academicSection")}>
             <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-              <Controller name="university_student_id" control={control}
-                render={({ field }) => (
-                  <Input {...field} label={t("profile.studentId")} placeholder="21060101" />
-                )}
-              />
-              <div />
+              <div className="sm:col-span-2 space-y-1.5">
+                <Controller name="university_student_id" control={control}
+                  rules={{ required: t("validation.studentId") }}
+                  render={({ field }) => (
+                    <Input {...field} label={`${t("profile.studentId")} *`} placeholder="21060101"
+                      isInvalid={!!formState.errors.university_student_id}
+                      hint={formState.errors.university_student_id?.message} />
+                  )}
+                />
+                <div className="flex items-center gap-1.5 text-xs text-fg-tertiary">
+                  <LockIcon size={12} className="shrink-0" />
+                  <span>{t("setup.lockNote")}</span>
+                </div>
+              </div>
               <Controller name="faculty_id" control={control}
+                rules={{ required: t("validation.faculty") }}
                 render={({ field }) => (
-                  <Select label={t("profile.faculty")} placeholder={t("personalInfo.facultyPlaceholder")} size="md"
+                  <Select label={`${t("profile.faculty")} *`} placeholder={t("personalInfo.facultyPlaceholder")} size="md"
                     selectedKey={field.value || null}
                     onSelectionChange={(k) => field.onChange(k)}
+                    isInvalid={!!formState.errors.faculty_id}
                     items={faculties.map(f => ({ id: f.public_id, label: f.name }))}>
                     {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
                   </Select>
                 )}
               />
               <Controller name="degree_level_id" control={control}
+                rules={{ required: t("validation.degree") }}
                 render={({ field }) => (
-                  <Select label={t("profile.direction")} placeholder={t("personalInfo.degreePlaceholder")} size="md"
+                  <Select label={`${t("profile.direction")} *`} placeholder={t("personalInfo.degreePlaceholder")} size="md"
                     selectedKey={field.value || null}
                     onSelectionChange={(k) => field.onChange(k)}
+                    isInvalid={!!formState.errors.degree_level_id}
                     items={degreeLevels.map(d => ({ id: d.public_id, label: d.name }))}>
                     {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
                   </Select>
                 )}
               />
               <Controller name="year_level_id" control={control}
+                rules={{ required: t("validation.year") }}
                 render={({ field }) => (
-                  <Select label={t("profile.year")} placeholder={t("personalInfo.yearPlaceholder")} size="md"
+                  <Select label={`${t("profile.year")} *`} placeholder={t("personalInfo.yearPlaceholder")} size="md"
                     selectedKey={field.value || null}
                     onSelectionChange={(k) => field.onChange(k)}
+                    isInvalid={!!formState.errors.year_level_id}
                     items={yearLevels.map(y => ({ id: y.public_id, label: y.name }))}>
                     {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
                   </Select>
@@ -457,26 +481,23 @@ export default function WaitingRoomPage() {
             </div>
           </Section>
 
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 mt-4 pt-5 border-t border-border-secondary">
             <button
               type="button"
               onClick={cancelEdit}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-fg-secondary hover:text-fg-primary transition-colors disabled:opacity-50"
+              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-fg-primary px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 disabled:opacity-50 order-2 sm:order-1"
             >
-              <XIcon size={16} />
               {t("common.cancel")}
             </button>
-            <Button
+
+            <button
               type="submit"
-              color="primary"
-              size="md"
-              iconLeading={CheckIcon}
-              isLoading={saving}
-              isDisabled={saving}
+              disabled={saving}
+              className="inline-flex w-full sm:w-auto min-w-[200px] justify-center items-center gap-2 rounded-lg bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 text-white px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-50 order-1 sm:order-2"
             >
-              {t("common.save")}
-            </Button>
+              {saving ? t("common.loading") : t("common.save")}
+            </button>
           </div>
         </form>
       )}

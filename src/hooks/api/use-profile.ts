@@ -122,3 +122,23 @@ export const useUpdateProfile = () => {
     },
   });
 };
+
+export const useUpdateProfilePhoto = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (formData: FormData) => {
+      // NOTE: Ensure endpoints map properly if they don't have trailing slashes
+      const url = API_CONFIG.endpoints.student.profile.endsWith('/')
+        ? `${API_CONFIG.endpoints.student.profile}photo/`
+        : `${API_CONFIG.endpoints.student.profile}/photo/`;
+
+      const { data } = await axiosInstance.patch(url, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student-me"] });
+    },
+  });
+};

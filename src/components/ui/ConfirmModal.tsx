@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -79,9 +80,9 @@ export function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`flex-1 h-10 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${v.confirmBg}`}
+            className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${v.confirmBg}`}
           >
-            {isLoading ? 'Yuklanmoqda...' : confirmLabel}
+            {isLoading ? <Spinner className="size-4" /> : confirmLabel}
           </button>
         </div>
       </div>

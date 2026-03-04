@@ -72,12 +72,35 @@
   "waiting": {
     "title": "Tekshiruvda",
     "description": "Ma'lumotlaringiz universitet xodimlari tomonidan ko'rib chiqilmoqda. Tasdiqlangach, tizimdan to'liq foydalana olasiz.",
+    "badgeLabel": "Tekshiruvda",
     "nameLabel": "Ism",
     "emailLabel": "Email",
     "universityLabel": "Universitet",
     "statusLabel": "Holat",
     "statusWaited": "Kutilmoqda",
     "switchAccount": "Boshqa hisob bilan kirish"
+  },
+  "setup": {
+    "bannerTitle": "Profilingizni to'ldiring",
+    "bannerDesc": "Barcha ma'lumotlarni to'g'ri kiriting. Ular tasdiqlanish uchun ishlatiladi.",
+    "bannerBadge": "Profil sozlash",
+    "avatarHint": "Rasmni o'rnatish uchun yuqoridagi avatarga bosing",
+    "lockNote": "Tasdiqlangandan keyin o'zgartirib bo'lmaydi. To'g'ri kiriting.",
+    "actionsSection": "Harakatlar",
+    "savedSuccess": "Profil yangilandi",
+    "savedDesc": "Ma'lumotlaringiz saqlandi.",
+    "saveError": "Ma'lumotlarni saqlashda xatolik"
+  },
+  "validation": {
+    "name": "Ismni kiriting",
+    "surname": "Familiyani kiriting",
+    "middleName": "Otasining ismini kiriting",
+    "studentId": "Talaba IDsini kiriting",
+    "dob": "Tug'ilgan sanani kiriting",
+    "phone": "Telefon raqamini kiriting",
+    "faculty": "Fakultetni tanlang",
+    "degree": "Darajani tanlang",
+    "year": "Kursni tanlang"
   },
   "profile": {
     "title": "Profil",

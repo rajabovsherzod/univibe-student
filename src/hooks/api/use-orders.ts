@@ -49,6 +49,9 @@ export function useCreateOrder() {
     onSuccess: () => {
       // Refresh balance after purchase
       queryClient.invalidateQueries({ queryKey: ["student-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["market-products"] });
+      queryClient.invalidateQueries({ queryKey: ["market-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["student-transactions"] });
     },
   });
 }

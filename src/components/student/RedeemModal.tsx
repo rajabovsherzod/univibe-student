@@ -8,6 +8,7 @@ import { useTranslation } from '@/lib/i18n/i18n';
 import type { ShopProduct } from '@/hooks/api/use-shop';
 import { toHttps } from '@/utils/cx';
 import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
+import { Spinner } from '@/components/ui/spinner';
 
 interface RedeemModalProps {
   product: ShopProduct | null;
@@ -131,8 +132,8 @@ export function RedeemModal({ product, userBalance, isLoading, onConfirm, onClos
             >
               {isLoading ? (
                 <>
-                  <span className="size-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {t('shop.loading')}
+                  <Spinner className="size-5 text-white" />
+                  {/* {t('shop.loading')} */}
                 </>
               ) : (
                 <>
