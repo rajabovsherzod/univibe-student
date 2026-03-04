@@ -45,13 +45,21 @@ jobs:
             CONTAINER_NAME="univibe-student"
             IMAGE_NAME="univibe-student"
 
-            # Clone if first deployment
-            if [ ! -d "$DEPLOY_DIR" ]; then
+            # Clone if first deployment (check for .git, not just directory)
+            if [ ! -d "$DEPLOY_DIR/.git" ]; then
               echo "First deployment - cloning repository..."
+              # Backup .env if it exists in the directory
+              if [ -f "$DEPLOY_DIR/.env" ]; then
+                cp "$DEPLOY_DIR/.env" /tmp/univibe-student-env-backup
+              fi
+              rm -rf "$DEPLOY_DIR"
               cd "$HOME"
               git clone https://${GH_PAT}@github.com/rajabovsherzod/univibe-student.git univibe-student
               cd "$DEPLOY_DIR"
-              git remote set-url origin https://${GH_PAT}@github.com/rajabovsherzod/univibe-student.git
+              # Restore .env if it was backed up
+              if [ -f /tmp/univibe-student-env-backup ]; then
+                mv /tmp/univibe-student-env-backup "$DEPLOY_DIR/.env"
+              fi
             else
               cd "$DEPLOY_DIR"
               git remote set-url origin https://${GH_PAT}@github.com/rajabovsherzod/univibe-student.git
