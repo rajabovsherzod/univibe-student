@@ -5,6 +5,8 @@ export const API_CONFIG = {
       login: "/api/v1/user/auth/login/",
       otpSend: "/api/v1/user/auth/otp/send/",
       otpVerify: "/api/v1/user/auth/otp/verify/",
+      forgotPasswordSend: "/api/v1/user/auth/password/forgot/send/",
+      forgotPasswordVerify: "/api/v1/user/auth/password/forgot/verify/",
       passwordSet: "/api/v1/user/auth/password/set/",
       resumeSignup: "/api/v1/user/auth/resume-signup/",
       refresh: "/api/v1/user/auth/refresh/",
