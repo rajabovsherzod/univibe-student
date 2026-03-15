@@ -197,7 +197,9 @@
     "redeemSuccessBtn": "Got it",
     "redeemError": "An error occurred",
     "exchange": "Exchange",
-    "stockLeft": "left"
+    "stockLeft": "left",
+    "emptyTitle": "No Products Available",
+    "emptyDescription": "There are no products in the shop right now. Please check back later."
   },
   "nav": {
     "home": "Home",

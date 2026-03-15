@@ -197,7 +197,9 @@
     "redeemSuccessBtn": "Понятно",
     "redeemError": "Произошла ошибка",
     "exchange": "Обменять",
-    "stockLeft": "шт."
+    "stockLeft": "шт.",
+    "emptyTitle": "Товары отсутствуют",
+    "emptyDescription": "В данный момент товаров в магазине нет. Пожалуйста, зайдите позже."
   },
   "nav": {
     "home": "Главная",
