@@ -12,7 +12,6 @@ import { toast } from "sonner";
 
 import { Input } from "@/components/base/input/input";
 import { Button } from "@/components/base/buttons/button";
-import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { ThemeToggle } from "@/components/base/theme-toggle/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useTranslation } from "@/lib/i18n/i18n";
@@ -28,7 +27,6 @@ export default function LoginPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
 
   const { control, handleSubmit, formState } = useForm<LoginFormValues>({
     resolver: zodResolver(LoginSchema),
@@ -124,14 +122,7 @@ export default function LoginPage() {
               )}
             />
 
-            <div className="flex items-center justify-between gap-2">
-              <Checkbox
-                isSelected={rememberMe}
-                onChange={setRememberMe}
-                isDisabled={isLoading}
-                label={t("auth.rememberMe")}
-                size="sm"
-              />
+            <div className="flex items-center justify-end">
               <Link href="/forgot-password" className="text-sm font-semibold text-brand-solid hover:text-brand-700 transition-colors outline-none focus-visible:underline">
                 {t("auth.forgotPassword")}
               </Link>

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, ArrowLeft, Mail01, CheckCircle } from "@untitledui/icons";
+import { ArrowLeft, Mail01, CheckCircle } from "@untitledui/icons";
 import { signIn } from "next-auth/react";
 
 import { Input } from "@/components/base/input/input";
@@ -253,7 +253,6 @@ export default function SignupPage() {
                     type="button"
                     className="w-full"
                     size="xl"
-                    iconTrailing={ArrowRight}
                     isLoading={isLoggingIn}
                     isDisabled={isLoggingIn}
                     onClick={handleLoginAfterSignup}
@@ -301,7 +300,7 @@ export default function SignupPage() {
                     )} />
                   </div>
                   <div className="col-span-1 sm:col-span-2 mt-2">
-                    <Button type="submit" className="w-full" size="xl" iconTrailing={ArrowRight} isLoading={sendOtp.isPending} isDisabled={sendOtp.isPending}>
+                    <Button type="submit" className="w-full" size="xl" isLoading={sendOtp.isPending} isDisabled={sendOtp.isPending}>
                       {t("auth.continue")}
                     </Button>
                   </div>
