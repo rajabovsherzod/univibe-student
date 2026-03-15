@@ -19,11 +19,11 @@ import { useTranslation } from "@/lib/i18n/i18n";
 
 import { useForgotPasswordSendOTP, useForgotPasswordVerifyOTP, useSetPassword } from "@/hooks/api/use-auth";
 
-import { ForgotPasswordEmailSchema, ForgotPasswordOtpSchema, ForgotPasswordSetSchema } from "./schema";
+import { createForgotPasswordEmailSchema, createForgotPasswordOtpSchema, createForgotPasswordSetSchema } from "./schema";
 import type { ForgotPasswordEmailType, ForgotPasswordOtpType, ForgotPasswordSetType } from "./schema";
 
 function extractApiError(e: any): string {
-  if (!e?.response) return "Server bilan ulanib bo'lmadi. Internetni tekshiring.";
+  if (!e?.response) return "Server bilan ulanib bo'lmadi. Internetni tekshiring."; // Not translated, core error.
   const data = e.response.data;
   if (!data) return `Server xatosi (${e.response.status})`;
   if (typeof data === "string") return data;
@@ -37,7 +37,7 @@ function extractApiError(e: any): string {
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 4 is success
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [otpStatus, setOtpStatus] = useState<"idle" | "error" | "success">("idle");
   const [countdown, setCountdown] = useState(0);
   const [accessToken, setAccessToken] = useState("");
@@ -47,17 +47,17 @@ export default function ForgotPasswordPage() {
   const setPassword = useSetPassword();
 
   const emailForm = useForm<ForgotPasswordEmailType>({
-    resolver: zodResolver(ForgotPasswordEmailSchema),
+    resolver: zodResolver(createForgotPasswordEmailSchema(t)),
     defaultValues: { email: "" },
   });
 
   const otpForm = useForm<ForgotPasswordOtpType>({
-    resolver: zodResolver(ForgotPasswordOtpSchema),
+    resolver: zodResolver(createForgotPasswordOtpSchema(t)),
     defaultValues: { code: "" },
   });
 
   const pwForm = useForm<ForgotPasswordSetType>({
-    resolver: zodResolver(ForgotPasswordSetSchema),
+    resolver: zodResolver(createForgotPasswordSetSchema(t)),
     defaultValues: { password: "", confirmPassword: "" },
   });
 
@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
   const onEmailSubmit = async (data: ForgotPasswordEmailType) => {
     try {
       await sendOtp.mutateAsync({ email: data.email });
-      toast.success(t("auth.codeSent"), { description: `${data.email} pochta manziliga kod yuborildi.` });
+      toast.success(t("auth.codeSent"), { description: `${data.email} ${t("auth.forgotCodeSentDesc")}` });
       setStep(2);
       setCountdown(120);
     } catch (e: any) {
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
 
   const onPwSubmit = async (data: ForgotPasswordSetType) => {
     if (!accessToken) {
-      toast.error(t("common.error"), { description: "Sessiya xatosi yuz berdi. Iltimos qaytadan urinib ko'ring." });
+      toast.error(t("common.error"), { description: t("auth.forgotSessionError") });
       setStep(1);
       return;
     }
@@ -144,12 +144,12 @@ export default function ForgotPasswordPage() {
           </Link>
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-primary">
-              {step === 4 ? "Parol o'zgartirildi" : "Parolni tiklash"}
+              {step === 4 ? t("auth.forgotTitleSuccess") : t("auth.forgotTitle")}
             </h1>
             <p className="mt-1 text-sm text-tertiary">
               {step === 4
-                ? "Yangi parolingiz muvaffaqiyatli o'rnatildi"
-                : step === 1 ? "Ro'yxatdan o'tgan email manzilini kiriting" : step === 2 ? `${emailForm.getValues("email")} ga yuborilgan kodni kiriting` : "Yangi xavfsiz parolni kiriting"}
+                ? t("auth.forgotSubtitleSuccess")
+                : step === 1 ? t("auth.forgotSubtitleEmail") : step === 2 ? `${emailForm.getValues("email")} ${t("auth.forgotSubtitleOtp")}` : t("auth.forgotSubtitlePassword")}
             </p>
           </div>
         </div>
@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
               ))}
             </div>
             <p className="text-xs font-medium text-tertiary text-center">
-              Qadam {step} / 3
+              {t("auth.forgotStep3").replace("{step}", String(step))}
             </p>
           </div>
         )}
@@ -234,13 +234,13 @@ export default function ForgotPasswordPage() {
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
                 <form onSubmit={pwForm.handleSubmit(onPwSubmit)} className="flex flex-col gap-4">
                   <Controller name="password" control={pwForm.control} render={({ field }) => (
-                    <Input {...field} label="Yangi parol" placeholder="Kamida 6 ta belgi" type="password" isInvalid={!!pwForm.formState.errors.password} hint={pwForm.formState.errors.password?.message} isDisabled={setPassword.isPending} />
+                    <Input {...field} label={t("auth.forgotNewPassword")} placeholder={t("auth.forgotNewPasswordPlaceholder")} type="password" isInvalid={!!pwForm.formState.errors.password} hint={pwForm.formState.errors.password?.message} isDisabled={setPassword.isPending} />
                   )} />
                   <Controller name="confirmPassword" control={pwForm.control} render={({ field }) => (
-                    <Input {...field} label="Tasdiqlash" placeholder="Parolni qayta kiriting" type="password" isInvalid={!!pwForm.formState.errors.confirmPassword} hint={pwForm.formState.errors.confirmPassword?.message} isDisabled={setPassword.isPending} />
+                    <Input {...field} label={t("auth.forgotConfirmPassword")} placeholder={t("auth.confirmPasswordPlaceholder")} type="password" isInvalid={!!pwForm.formState.errors.confirmPassword} hint={pwForm.formState.errors.confirmPassword?.message} isDisabled={setPassword.isPending} />
                   )} />
                   <Button type="submit" className="w-full mt-2" size="xl" iconTrailing={ArrowRight} isLoading={setPassword.isPending} isDisabled={setPassword.isPending}>
-                    Parolni saqlash
+                    {t("auth.forgotSavePassword")}
                   </Button>
                 </form>
               </motion.div>
@@ -254,9 +254,9 @@ export default function ForgotPasswordPage() {
                     <CheckCircle className="size-8 text-success-600 dark:text-success-400" />
                   </div>
                   <div className="text-center">
-                    <h2 className="text-lg font-bold text-primary mb-1">Muvaffaqiyatli saqlandi!</h2>
+                    <h2 className="text-lg font-bold text-primary mb-1">{t("auth.forgotSuccessTitle")}</h2>
                     <p className="text-sm text-tertiary max-w-xs">
-                      Sizning hisobingiz paroli xavfsiz yangilandi. Endi tizimga yangi parolingiz bilan daxlsiz kira olasiz.
+                      {t("auth.forgotSuccessDesc")}
                     </p>
                   </div>
                   <Button
@@ -266,7 +266,7 @@ export default function ForgotPasswordPage() {
                     iconTrailing={ArrowRight}
                     onClick={() => router.push("/login")}
                   >
-                    Tizimga kirish
+                    {t("auth.login")}
                   </Button>
                 </div>
               </motion.div>
@@ -278,8 +278,8 @@ export default function ForgotPasswordPage() {
         {/* Footer */}
         {step === 1 && (
           <p className="mt-6 text-center text-sm text-tertiary">
-            Esladingizmi?{" "}
-            <Link href="/login" className="font-semibold text-brand-solid hover:text-brand-700 hover:underline transition-colors">Tizimga qaytish</Link>
+            {t("auth.forgotRemembered")}
+            <Link href="/login" className="font-semibold text-brand-solid hover:text-brand-700 hover:underline transition-colors">{t("auth.forgotBackLogin")}</Link>
           </p>
         )}
       </div>

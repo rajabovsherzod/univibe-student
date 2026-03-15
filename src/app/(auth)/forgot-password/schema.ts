@@ -1,23 +1,23 @@
 import * as z from "zod";
 
-export const ForgotPasswordEmailSchema = z.object({
-  email: z.string().email("Yaroqli elektron pochta kiriting"),
+export const createForgotPasswordEmailSchema = (t: (key: string) => string) => z.object({
+  email: z.string().email(t("auth.forgotEmailError")),
 });
 
-export type ForgotPasswordEmailType = z.infer<typeof ForgotPasswordEmailSchema>;
+export type ForgotPasswordEmailType = z.infer<ReturnType<typeof createForgotPasswordEmailSchema>>;
 
-export const ForgotPasswordOtpSchema = z.object({
-  code: z.string().length(6, "Kodni to'liq kiriting"),
+export const createForgotPasswordOtpSchema = (t: (key: string) => string) => z.object({
+  code: z.string().length(6, t("auth.forgotCodeError")),
 });
 
-export type ForgotPasswordOtpType = z.infer<typeof ForgotPasswordOtpSchema>;
+export type ForgotPasswordOtpType = z.infer<ReturnType<typeof createForgotPasswordOtpSchema>>;
 
-export const ForgotPasswordSetSchema = z.object({
-  password: z.string().min(6, "Parol kamida 6 belgidan iborat bo'lishi kerak"),
-  confirmPassword: z.string().min(6, "Parol kamida 6 belgidan iborat bo'lishi kerak"),
+export const createForgotPasswordSetSchema = (t: (key: string) => string) => z.object({
+  password: z.string().min(6, t("auth.forgotPasswordLengthError")),
+  confirmPassword: z.string().min(6, t("auth.forgotPasswordLengthError")),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Parollar mos kelmadi",
+  message: t("auth.forgotPasswordError"),
   path: ["confirmPassword"],
 });
 
-export type ForgotPasswordSetType = z.infer<typeof ForgotPasswordSetSchema>;
+export type ForgotPasswordSetType = z.infer<ReturnType<typeof createForgotPasswordSetSchema>>;
