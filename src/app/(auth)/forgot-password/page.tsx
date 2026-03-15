@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, ArrowLeft, Mail01, CheckCircle } from "@untitledui/icons";
+import { ArrowLeft, Mail01, CheckCircle } from "@untitledui/icons";
 
 import { Input } from "@/components/base/input/input";
 import { Button } from "@/components/base/buttons/button";
@@ -179,7 +179,7 @@ export default function ForgotPasswordPage() {
                   <Controller name="email" control={emailForm.control} render={({ field }) => (
                     <Input {...field} label={t("auth.email")} placeholder={t("auth.emailPlaceholder")} type="email" isInvalid={!!emailForm.formState.errors.email} hint={emailForm.formState.errors.email?.message} isDisabled={sendOtp.isPending} />
                   )} />
-                  <Button type="submit" className="w-full mt-2" size="xl" iconTrailing={ArrowRight} isLoading={sendOtp.isPending} isDisabled={sendOtp.isPending}>
+                  <Button type="submit" className="w-full mt-2" size="xl" isLoading={sendOtp.isPending} isDisabled={sendOtp.isPending}>
                     {t("auth.continue")}
                   </Button>
                 </form>
@@ -239,7 +239,7 @@ export default function ForgotPasswordPage() {
                   <Controller name="confirmPassword" control={pwForm.control} render={({ field }) => (
                     <Input {...field} label={t("auth.forgotConfirmPassword")} placeholder={t("auth.confirmPasswordPlaceholder")} type="password" isInvalid={!!pwForm.formState.errors.confirmPassword} hint={pwForm.formState.errors.confirmPassword?.message} isDisabled={setPassword.isPending} />
                   )} />
-                  <Button type="submit" className="w-full mt-2" size="xl" iconTrailing={ArrowRight} isLoading={setPassword.isPending} isDisabled={setPassword.isPending}>
+                  <Button type="submit" className="w-full mt-2" size="xl" isLoading={setPassword.isPending} isDisabled={setPassword.isPending}>
                     {t("auth.forgotSavePassword")}
                   </Button>
                 </form>
@@ -263,7 +263,6 @@ export default function ForgotPasswordPage() {
                     type="button"
                     className="w-full"
                     size="xl"
-                    iconTrailing={ArrowRight}
                     onClick={() => router.push("/login")}
                   >
                     {t("auth.login")}
