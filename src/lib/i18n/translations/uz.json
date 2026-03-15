@@ -197,7 +197,9 @@
     "redeemSuccessBtn": "Tushunarli",
     "redeemError": "Xatolik yuz berdi",
     "exchange": "Almashtirish",
-    "stockLeft": "dona"
+    "stockLeft": "dona",
+    "emptyTitle": "Mahsulotlar mavjud emas",
+    "emptyDescription": "Hozircha do'konda mahsulotlar yo'q. Iltimos, keyinroq qayta tekshiring."
   },
   "nav": {
     "home": "Bosh sahifa",

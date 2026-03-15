@@ -115,11 +115,29 @@ function PodiumCard({ item, position }: { item: LeaderboardItem; position: 1 | 2
 
 export default function LeaderboardPage() {
   const { t } = useTranslation();
+  
+  // Get current academic year intelligently
+  // If month is September (8) to December (11) → return current year
+  // If month is January (0) to August (7) → return previous year
+  const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-11 (January-August)
+    
+    // Academic year: Sept 2024 - Aug 2025 → returns 2024
+    if (month >= 8) { // September to December
+      return year;
+    } else { // January to August
+      return year - 1;
+    }
+  };
+
   const [filters, setFilters] = useState<LeaderboardFilters>({
     period_type: 'ALL_TIME',
     page_size: 20,
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
   const { data: profile } = useStudentMe();
   const universityId = profile?.university_public_id;
@@ -160,15 +178,34 @@ export default function LeaderboardPage() {
           {/* Desktop inline filters */}
           <div className="hidden sm:flex items-center gap-2">
             <div className="w-36">
-              <Select label="" placeholder={t('leaderboard.filterPeriod')} size="md"
+              <Select aria-label={t('leaderboard.filterPeriod')} placeholder={t('leaderboard.filterPeriod')} size="md"
                 selectedKey={filters.period_type || null}
-                onSelectionChange={(k) => setFilters(prev => ({ ...prev, period_type: k as LeaderboardFilters['period_type'] }))}
+                onSelectionChange={(k) => {
+                  const newPeriodType = k as LeaderboardFilters['period_type'];
+                  const newFilters: LeaderboardFilters = { ...filters, period_type: newPeriodType };
+                  
+                  if (newPeriodType === 'YEARLY') {
+                    // Auto-set current year when switching to YEARLY
+                    if (!selectedYear) {
+                      const year = getCurrentAcademicYear();
+                      newFilters.period_year = year;
+                      setSelectedYear(year);
+                    } else {
+                      newFilters.period_year = selectedYear;
+                    }
+                  } else {
+                    // Clear period_year when switching to ALL_TIME
+                    newFilters.period_year = undefined;
+                  }
+                  
+                  setFilters(newFilters);
+                }}
                 items={[{ id: 'ALL_TIME', label: t('leaderboard.filterAllTime') }, { id: 'YEARLY', label: t('leaderboard.filterYearly') }]}
               >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
             </div>
 
             <div className="w-40">
-              <Select label="" placeholder={t('leaderboard.filterFaculty')} size="md"
+              <Select aria-label={t('leaderboard.filterFaculty')} placeholder={t('leaderboard.filterFaculty')} size="md"
                 selectedKey={filters.faculty_public_id || null}
                 onSelectionChange={(k) => setFilters(prev => ({ ...prev, faculty_public_id: k ? String(k) : undefined }))}
                 items={faculties.map(f => ({ id: f.public_id, label: f.name }))}
@@ -176,7 +213,7 @@ export default function LeaderboardPage() {
             </div>
 
             <div className="w-32">
-              <Select label="" placeholder={t('leaderboard.filterYear')} size="md"
+              <Select aria-label={t('leaderboard.filterYear')} placeholder={t('leaderboard.filterYear')} size="md"
                 selectedKey={filters.year_level_public_id || null}
                 onSelectionChange={(k) => setFilters(prev => ({ ...prev, year_level_public_id: k ? String(k) : undefined }))}
                 items={yearLevels.map(y => ({ id: y.public_id, label: y.name }))}
@@ -195,15 +232,34 @@ export default function LeaderboardPage() {
         {showFilters && (
           <div className="mt-3 flex gap-2 sm:hidden">
             <div className="flex-1">
-              <Select label="" placeholder={t('leaderboard.filterPeriod')} size="md"
+              <Select aria-label={t('leaderboard.filterPeriod')} placeholder={t('leaderboard.filterPeriod')} size="md"
                 selectedKey={filters.period_type || null}
-                onSelectionChange={(k) => setFilters(prev => ({ ...prev, period_type: k as LeaderboardFilters['period_type'] }))}
+                onSelectionChange={(k) => {
+                  const newPeriodType = k as LeaderboardFilters['period_type'];
+                  const newFilters: LeaderboardFilters = { ...filters, period_type: newPeriodType };
+                  
+                  if (newPeriodType === 'YEARLY') {
+                    // Auto-set current year when switching to YEARLY
+                    if (!selectedYear) {
+                      const year = getCurrentAcademicYear();
+                      newFilters.period_year = year;
+                      setSelectedYear(year);
+                    } else {
+                      newFilters.period_year = selectedYear;
+                    }
+                  } else {
+                    // Clear period_year when switching to ALL_TIME
+                    newFilters.period_year = undefined;
+                  }
+                  
+                  setFilters(newFilters);
+                }}
                 items={[{ id: 'ALL_TIME', label: t('leaderboard.filterAll') }, { id: 'YEARLY', label: t('leaderboard.filterYearly') }]}
               >{(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}</Select>
             </div>
 
             <div className="flex-1">
-              <Select label="" placeholder={t('leaderboard.filterFaculty')} size="md"
+              <Select aria-label={t('leaderboard.filterFaculty')} placeholder={t('leaderboard.filterFaculty')} size="md"
                 selectedKey={filters.faculty_public_id || null}
                 onSelectionChange={(k) => setFilters(prev => ({ ...prev, faculty_public_id: k ? String(k) : undefined }))}
                 items={faculties.map(f => ({ id: f.public_id, label: f.name }))}

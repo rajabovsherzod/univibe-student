@@ -21,7 +21,7 @@ function FlagUZ({ className }: { className?: string }) {
         const angle = (i * 30 - 90) * (Math.PI / 180);
         const cx = 280 + 8 * Math.cos(angle);
         const cy = 80 + 8 * Math.sin(angle);
-        return <circle key={i} cx={cx} cy={cy} r="4" fill="#fff" />;
+        return <circle key={i} cx={cx.toFixed(2)} cy={cy.toFixed(2)} r="4" fill="#fff" />;
       })}
     </svg>
   );

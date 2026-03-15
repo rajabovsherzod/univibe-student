@@ -169,8 +169,9 @@ export default function ShopPage() {
           </div>
         ) : (
           <div className="rounded-2xl bg-bg-secondary border border-border-secondary shadow-sm py-16 text-center">
-            <StorefrontIcon size={48} className="text-fg-quaternary mx-auto mb-3" />
-            <p className="text-fg-tertiary text-sm">{t('common.loading')}</p>
+            <StorefrontIcon size={48} weight="light" className="text-fg-quaternary mx-auto mb-4" />
+            <h3 className="text-base font-semibold text-fg-primary mb-1">{t('shop.emptyTitle')}</h3>
+            <p className="text-sm text-fg-tertiary max-w-md mx-auto">{t('shop.emptyDescription')}</p>
           </div>
         )}
       </div>

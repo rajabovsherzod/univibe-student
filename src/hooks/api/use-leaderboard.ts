@@ -36,7 +36,7 @@ export interface LeaderboardResponse {
 
 export interface LeaderboardFilters {
   period_type?: "ALL_TIME" | "YEARLY";
-  period_year?: number;
+  period_year?: number | string; // Allow both number and academic year string (e.g., "2024" or "2024-2025")
   faculty_public_id?: string;
   year_level_public_id?: string;
   page?: number;
@@ -50,7 +50,10 @@ export const useLeaderboard = (filters: LeaderboardFilters = {}) => {
 
   const params = new URLSearchParams();
   if (filters.period_type) params.set("period_type", filters.period_type);
-  if (filters.period_year) params.set("period_year", String(filters.period_year));
+  // Only send period_year if it exists and period_type is YEARLY
+  if (filters.period_year && filters.period_type === 'YEARLY') {
+    params.set("period_year", String(filters.period_year));
+  }
   if (filters.faculty_public_id) params.set("faculty_public_id", filters.faculty_public_id);
   if (filters.year_level_public_id) params.set("year_level_public_id", filters.year_level_public_id);
   if (filters.page) params.set("page", String(filters.page));
@@ -89,7 +92,10 @@ export const useMyLeaderboardEntry = (filters: LeaderboardFilters = {}) => {
 
   const params = new URLSearchParams();
   if (filters.period_type) params.set("period_type", filters.period_type);
-  if (filters.period_year) params.set("period_year", String(filters.period_year));
+  // Only send period_year if it exists and period_type is YEARLY
+  if (filters.period_year && filters.period_type === 'YEARLY') {
+    params.set("period_year", String(filters.period_year));
+  }
   if (filters.faculty_public_id) params.set("faculty_public_id", filters.faculty_public_id);
   if (filters.year_level_public_id) params.set("year_level_public_id", filters.year_level_public_id);
 
