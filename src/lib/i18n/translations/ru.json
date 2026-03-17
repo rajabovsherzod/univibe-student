@@ -173,7 +173,14 @@
     "filterAll": "Все",
     "filterFaculty": "Факультет",
     "filterYear": "Курс",
-    "filterButton": "Фильтр"
+    "filterButton": "Фильтр",
+    "pagination": {
+      "previous": "Предыдущая",
+      "next": "Следующая",
+      "page": "Страница",
+      "of": "из",
+      "range": "{start}-{end} / {total}"
+    }
   },
   "shop": {
     "title": "Магазин",

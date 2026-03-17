@@ -173,7 +173,14 @@
     "filterAll": "All",
     "filterFaculty": "Faculty",
     "filterYear": "Year",
-    "filterButton": "Filter"
+    "filterButton": "Filter",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page",
+      "of": "of",
+      "range": "{start}-{end} / {total}"
+    }
   },
   "shop": {
     "title": "Shop",

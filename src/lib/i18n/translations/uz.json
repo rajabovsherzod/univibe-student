@@ -173,7 +173,14 @@
     "filterAll": "Barchasi",
     "filterFaculty": "Fakultet",
     "filterYear": "Kurs",
-    "filterButton": "Filtr"
+    "filterButton": "Filtr",
+    "pagination": {
+      "previous": "Oldingi",
+      "next": "Keyingi",
+      "page": "Sahifa",
+      "of": "dan",
+      "range": "{start}-{end} / {total} tadan"
+    }
   },
   "shop": {
     "title": "Do'kon",

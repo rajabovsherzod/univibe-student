@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Trophy, FunnelSimple } from '@phosphor-icons/react';
 import { useLeaderboard, useMyLeaderboardEntry, type LeaderboardItem, type LeaderboardFilters } from '@/hooks/api/use-leaderboard';
 import { useFaculties, useYearLevels, useStudentMe } from '@/hooks/api/use-profile';
 import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
 import { CoinPill } from '@/components/student/CoinPill';
+import { LeaderboardPagination } from '@/components/student/LeaderboardPagination';
 import { toHttps } from '@/utils/cx';
 import { Select } from '@/components/base/select/select';
 import { SelectItem } from '@/components/base/select/select-item';
@@ -132,9 +133,11 @@ export default function LeaderboardPage() {
     }
   };
 
+  const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<LeaderboardFilters>({
     period_type: 'ALL_TIME',
     page_size: 20,
+    page: 1,
   });
   const [showFilters, setShowFilters] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -145,6 +148,11 @@ export default function LeaderboardPage() {
   const { data: yearLevels = [] } = useYearLevels(universityId);
   const { data, isPending } = useLeaderboard(filters);
   const { data: myEntry } = useMyLeaderboardEntry(filters);
+
+  // Update filters when page changes
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, page }));
+  }, [page]);
 
   const results = data?.results || [];
   const top3 = results.slice(0, 3);
@@ -371,6 +379,17 @@ export default function LeaderboardPage() {
             </table>
           </div>
         </div>
+
+        {/* ── Pagination ── */}
+        {data?.pagination && data.pagination.total_pages > 0 && (
+          <LeaderboardPagination
+            page={page}
+            total={data.pagination.total_pages}
+            totalItems={data.pagination.total_items}
+            pageSize={data.pagination.page_size}
+            onPageChange={setPage}
+          />
+        )}
       </div>
 
       {/* ── My Rank Card (outside top 20) ── */}
