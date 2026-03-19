@@ -38,6 +38,62 @@ function PodiumSkeleton() {
   );
 }
 
+function PodiumWithTableSkeleton() {
+  return (
+    <>
+      <PodiumSkeleton />
+      <div className="border-t border-border-secondary" />
+      <div className="px-3 sm:px-6 py-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-4 w-4 rounded skeleton-shimmer" />
+          <div className="h-3 w-20 rounded skeleton-shimmer" />
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b-2 border-border-secondary">
+              <th className="text-left py-2.5 px-2 sm:px-4 w-10 sm:w-12"><div className="h-3 w-5 rounded skeleton-shimmer" /></th>
+              <th className="text-left py-2.5 px-2 sm:px-4"><div className="h-3 w-20 rounded skeleton-shimmer" /></th>
+              <th className="text-left py-2.5 px-2 sm:px-4 hidden md:table-cell"><div className="h-3 w-24 rounded skeleton-shimmer" /></th>
+              <th className="text-right py-2.5 px-2 sm:px-4 w-20 sm:w-28"><div className="h-3 w-16 rounded skeleton-shimmer ml-auto" /></th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 17 }).map((_, i) => (
+              <TableRowSkeleton key={i} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function TableOnlySkeleton() {
+  return (
+    <div className="px-3 sm:px-6 py-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="h-4 w-4 rounded skeleton-shimmer" />
+        <div className="h-3 w-20 rounded skeleton-shimmer" />
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b-2 border-border-secondary">
+            <th className="text-left py-2.5 px-2 sm:px-4 w-10 sm:w-12"><div className="h-3 w-5 rounded skeleton-shimmer" /></th>
+            <th className="text-left py-2.5 px-2 sm:px-4"><div className="h-3 w-20 rounded skeleton-shimmer" /></th>
+            <th className="text-left py-2.5 px-2 sm:px-4 hidden md:table-cell"><div className="h-3 w-24 rounded skeleton-shimmer" /></th>
+            <th className="text-right py-2.5 px-2 sm:px-4 w-20 sm:w-28"><div className="h-3 w-16 rounded skeleton-shimmer ml-auto" /></th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <TableRowSkeleton key={i} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function TableRowSkeleton() {
   return (
     <tr className="border-b border-border-secondary last:border-0">
@@ -155,18 +211,26 @@ export default function LeaderboardPage() {
   }, [page]);
 
   const results = data?.results || [];
-  const top3 = results.slice(0, 3);
-  const rest = results.slice(3);
-
-  // Podium: [2nd, 1st, 3rd]
-  const podiumOrder: { item: LeaderboardItem; pos: 1 | 2 | 3 }[] = [];
-  if (top3[1]) podiumOrder.push({ item: top3[1], pos: 2 });
-  if (top3[0]) podiumOrder.push({ item: top3[0], pos: 1 });
-  if (top3[2]) podiumOrder.push({ item: top3[2], pos: 3 });
-
+  const totalItems = data?.pagination?.total_items || 0;
+  const pageSize = data?.pagination?.page_size || 20;
   const myId = profile?.user_public_id;
 
-  // Check if current user is in the visible results (top 20)
+  // Backend sends paginated data (20 per page)
+  // Page 1: Split into podium (top 3) + table (remaining 17)
+  // Page 2+: Show all 20 in table
+  const isPage1 = page === 1;
+  const top3 = isPage1 ? results.slice(0, 3) : [];
+  const rest = isPage1 ? results.slice(3) : results;
+
+  // Podium: [2nd, 1st, 3rd] - only on page 1
+  const podiumOrder: { item: LeaderboardItem; pos: 1 | 2 | 3 }[] = [];
+  if (isPage1) {
+    if (top3[1]) podiumOrder.push({ item: top3[1], pos: 2 });
+    if (top3[0]) podiumOrder.push({ item: top3[0], pos: 1 });
+    if (top3[2]) podiumOrder.push({ item: top3[2], pos: 3 });
+  }
+
+  // Check if current user is in the visible results
   const meInResults = results.some(r => r.student_public_id === myId);
 
   return (
@@ -279,109 +343,110 @@ export default function LeaderboardPage() {
 
       {/* ── Main wrapper card ── */}
       <div className="rounded-2xl bg-bg-secondary border border-border-secondary shadow-sm overflow-hidden">
-
-        {/* Podium */}
-        <div className="px-3 sm:px-6 pt-5 pb-2">
-          <div className="flex items-center gap-2 mb-3">
-            <Trophy size={16} weight="fill" className="text-amber-500" />
-            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{t('leaderboard.top3')}</p>
-          </div>
-
-          {isPending ? (
-            <PodiumSkeleton />
-          ) : podiumOrder.length > 0 ? (
-            <div className="flex items-end justify-center gap-1.5 sm:gap-4 lg:gap-6 pb-2 px-4 sm:px-0">
-              {podiumOrder.map(({ item, pos }, idx) => (
-                <PodiumCard key={item.student_public_id || `p-${idx}`} item={item} position={pos} />
-              ))}
-            </div>
+        {isPending ? (
+          // Loading skeleton - different for page 1 vs page 2+
+          isPage1 ? (
+            <PodiumWithTableSkeleton />
           ) : (
-            <div className="py-10 text-center">
-              <p className="text-fg-tertiary text-sm">{t('common.loading')}</p>
-            </div>
-          )}
-        </div>
+            <TableOnlySkeleton />
+          )
+        ) : (
+          <>
+            {/* Podium - only on page 1 */}
+            {isPage1 && podiumOrder.length > 0 && (
+              <div className="px-3 sm:px-6 pt-5 pb-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <Trophy size={16} weight="fill" className="text-amber-500" />
+                  <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{t('leaderboard.top3')}</p>
+                </div>
+                <div className="flex items-end justify-center gap-1.5 sm:gap-4 lg:gap-6 pb-2 px-4 sm:px-0">
+                  {podiumOrder.map(({ item, pos }, idx) => (
+                    <PodiumCard key={item.student_public_id || `p-${idx}`} item={item} position={pos} />
+                  ))}
+                </div>
+              </div>
+            )}
 
-        <div className="border-t border-border-secondary" />
+            {isPage1 && <div className="border-t border-border-secondary" />}
 
-        {/* DataTable */}
-        <div className="px-3 sm:px-6 py-4">
-          <div className="flex items-center gap-2 mb-3">
-            <CoinOutlineIcon size={15} color="#f59e0b" strokeWidth={22} />
-            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{t('leaderboard.title')}</p>
-          </div>
+            {/* DataTable */}
+            <div className="px-3 sm:px-6 py-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CoinOutlineIcon size={15} color="#f59e0b" strokeWidth={22} />
+                <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{t('leaderboard.title')}</p>
+              </div>
 
-          <div className="overflow-x-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-border-secondary">
-                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-10 sm:w-12">#</th>
-                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4">{t('leaderboard.name')}</th>
-                  <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 hidden md:table-cell">{t('profile.faculty')}</th>
-                  <th className="text-right text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-20 sm:w-28">{t('leaderboard.coins')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isPending ? (
-                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} />)
-                ) : rest.length > 0 ? (
-                  rest.map((item, idx) => {
-                    const isMe = myId === item.student_public_id;
-                    const name = shortName(item.full_name);
-                    const initial = name.charAt(0).toUpperCase();
-                    return (
-                      <tr
-                        key={item.student_public_id || `r-${idx}`}
-                        className={[
-                          'border-b border-border-secondary last:border-0 transition-colors',
-                          isMe ? 'bg-brand-50/60 dark:bg-brand-950/30' : 'hover:bg-bg-primary/50',
-                        ].join(' ')}
-                      >
-                        <td className="py-3 px-2 sm:px-4">
-                          <span className={`text-xs sm:text-sm font-bold tabular-nums ${isMe ? 'text-brand-600 dark:text-brand-400' : 'text-fg-quaternary'}`}>
-                            {item.rank ?? (idx + 4)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-2 sm:px-4">
-                          <div className="flex items-center gap-2">
-                            <div className="size-7 sm:size-9 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
-                              {item.profile_photo ? (
-                                <Image src={toHttps(item.profile_photo)!} alt="" width={36} height={36} className="size-full object-cover" unoptimized />
-                              ) : (
-                                <div className="size-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-brand-600 dark:text-brand-400">{initial}</div>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className={`text-xs sm:text-sm font-semibold truncate ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-fg-primary'}`}>
-                                {name}
-                                {isMe && <span className="text-[10px] text-fg-tertiary ml-1">({t('leaderboard.myRank')})</span>}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 sm:px-4 hidden md:table-cell">
-                          <p className="text-xs text-fg-tertiary truncate max-w-[200px]">{item.faculty || '—'}</p>
-                        </td>
-                        <td className="py-3 px-2 sm:px-4 text-right">
-                          <CoinPill amount={item.total_coins} size="sm" variant="primary" />
+              <div className="overflow-x-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-border-secondary">
+                      <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-10 sm:w-12">#</th>
+                      <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4">{t('leaderboard.name')}</th>
+                      <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 hidden md:table-cell">{t('profile.faculty')}</th>
+                      <th className="text-right text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-20 sm:w-28">{t('leaderboard.coins')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rest.length > 0 ? (
+                      rest.map((item, idx) => {
+                        const isMe = myId === item.student_public_id;
+                        const name = shortName(item.full_name);
+                        const initial = name.charAt(0).toUpperCase();
+                        return (
+                          <tr
+                            key={item.student_public_id || `r-${idx}`}
+                            className={[
+                              'border-b border-border-secondary last:border-0 transition-colors',
+                              isMe ? 'bg-brand-50/60 dark:bg-brand-950/30' : 'hover:bg-bg-primary/50',
+                            ].join(' ')}
+                          >
+                            <td className="py-3 px-2 sm:px-4">
+                              <span className={`text-xs sm:text-sm font-bold tabular-nums ${isMe ? 'text-brand-600 dark:text-brand-400' : 'text-fg-quaternary'}`}>
+                                {item.rank ?? (idx + (isPage1 ? 4 : 1))}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 sm:px-4">
+                              <div className="flex items-center gap-2">
+                                <div className="size-7 sm:size-9 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
+                                  {item.profile_photo ? (
+                                    <Image src={toHttps(item.profile_photo)!} alt="" width={36} height={36} className="size-full object-cover" unoptimized />
+                                  ) : (
+                                    <div className="size-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-brand-600 dark:text-brand-400">{initial}</div>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className={`text-xs sm:text-sm font-semibold truncate ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-fg-primary'}`}>
+                                    {name}
+                                    {isMe && <span className="text-[10px] text-fg-tertiary ml-1">({t('leaderboard.myRank')})</span>}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 hidden md:table-cell">
+                              <p className="text-xs text-fg-tertiary truncate max-w-[200px]">{item.faculty || '—'}</p>
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-right">
+                              <CoinPill amount={item.total_coins} size="sm" variant="primary" />
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-fg-tertiary text-sm">
+                          {isPage1 ? 'Faqat podyumdagi talabalar mavjud' : 'Bu sahifada talabalar yo\'q'}
                         </td>
                       </tr>
-                    );
-                  })
-                ) : results.length > 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-8 text-center text-fg-tertiary text-sm">
-                      Faqat podyumdagi talabalar mavjud
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ── Pagination ── */}
-        {data?.pagination && data.pagination.total_pages > 0 && (
+        {data?.pagination && (
           <LeaderboardPagination
             page={page}
             total={data.pagination.total_pages}
