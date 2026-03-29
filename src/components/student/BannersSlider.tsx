@@ -2,14 +2,18 @@
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, EffectFade } from 'swiper/modules';
-import { useBanners } from '@/hooks/api/use-banners';
 import { BannerCard } from './BannerCard';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import type { Banner } from '@/types/banners';
 
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
+
+interface BannersSliderProps {
+  banners: Banner[];
+}
 
 /**
  * BannersSlider - Carousel slider for dashboard banners
@@ -19,23 +23,14 @@ import 'swiper/css/effect-fade';
  * - Pagination dots (bottom center)
  * - Fade effect between slides
  * - Responsive (mobile image support)
- * - Loading skeleton
- * - Empty state handling
+ * - No loading skeleton (SSR)
  */
-export function BannersSlider() {
-  const { data, isLoading } = useBanners();
+export function BannersSlider({ banners }: BannersSliderProps) {
   // Use 'sm' breakpoint (640px) for mobile detection
   const isMobile = !useBreakpoint('sm');
   
-  // Loading state - show skeleton
-  if (isLoading) {
-    return (
-      <div className="w-full h-[200px] sm:h-[300px] md:h-[350px] bg-bg-secondary animate-pulse rounded-xl" />
-    );
-  }
-  
   // No banners - hide component
-  if (!data?.results?.length) {
+  if (!banners?.length) {
     return null;
   }
   
@@ -60,7 +55,7 @@ export function BannersSlider() {
         speed={500}
         className="mySwiper"
       >
-        {data.results.map((banner) => (
+        {banners.map((banner) => (
           <SwiperSlide key={banner.public_id}>
             <BannerCard banner={banner} isMobile={isMobile} />
           </SwiperSlide>

@@ -20,7 +20,7 @@ import {
   SignOutIcon,
   ClockIcon,
   XCircleIcon,
-} from '@phosphor-icons/react';
+} from '@phosphor-icons/react/dist/ssr';
 import { useStudentMe } from '@/hooks/api/use-profile';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
@@ -154,8 +154,8 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const rawDisplayName = profileName || initialUser?.name || session?.user?.name || '\u00A0';
   const displayName = rawDisplayName.replace(/\bUser\b/ig, '').trim() || '\u00A0';
   const displayEmail = cachedProfile?.email || initialUser?.email || session?.user?.email || '\u00A0';
-  const displayPhoto = cachedProfile?.profile_photo || initialUser?.photo || undefined;
-  const displayStatus = (cachedProfile?.status || profile?.status) as 'waited' | 'approved' | 'rejected' | undefined;
+  const displayPhoto = cachedProfile?.profile_photo || initialUser?.photo || session?.user?.image || undefined;
+  const displayStatus = (cachedProfile?.status || profile?.status || session?.user?.studentStatus) as 'waited' | 'approved' | 'rejected' | undefined;
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -189,7 +189,15 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 <div className="flex items-center gap-3">
                   <div className="relative w-10 h-10 rounded-full shrink-0 overflow-hidden ring-2 ring-border-secondary">
                     {displayPhoto ? (
-                      <Image src={displayPhoto} alt={displayName} fill className="object-cover" unoptimized />
+                      <Image 
+                        src={displayPhoto} 
+                        alt={displayName} 
+                        fill 
+                        className="object-cover" 
+                        unoptimized 
+                        priority
+                        sizes="40px"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-brand-600 text-white font-bold text-sm">
                         {initial}

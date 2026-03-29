@@ -418,13 +418,13 @@ a:focus-visible {
 
 /* ── Shimmer skeleton ─────────────────────────────────────────────────────── */
 :root {
-  --shimmer-base: var(--color-gray-200);
-  --shimmer-glow: #ffffff;
+  --shimmer-base: var(--color-gray-100);
+  --shimmer-glow: var(--color-white);
 }
 
 .dark-mode {
-  --shimmer-base: var(--color-gray-700);
-  --shimmer-glow: var(--color-gray-600);
+  --shimmer-base: var(--color-gray-800);
+  --shimmer-glow: var(--color-gray-700);
 }
 
 @keyframes shimmer-sweep {
