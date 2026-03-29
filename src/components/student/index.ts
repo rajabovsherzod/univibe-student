@@ -16,3 +16,6 @@ export {
   NoNotifications,
   NoRegisteredEvents,
 } from './EmptyState';
+
+export { BannersSlider } from './BannersSlider';
+export { BannerCard } from './BannerCard';
