@@ -127,12 +127,18 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
 // ── Layout ─────────────────────────────────────────────────────────────────
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetch session on the server to prevent client-side flickering
+  const session = await getServerSession(authOptions);
+
   // Read cookies on the SERVER → correct SSR → zero flash
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get('theme')?.value;
@@ -176,7 +182,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.variable} antialiased`}>
-        <AppProvider initialLocale={localeCookie} initialUser={initialUser}>
+        <AppProvider initialLocale={localeCookie} initialUser={initialUser} session={session}>
           {children}
           <ThemeToaster />
         </AppProvider>

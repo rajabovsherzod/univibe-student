@@ -418,13 +418,13 @@ a:focus-visible {
 
 /* ── Shimmer skeleton ─────────────────────────────────────────────────────── */
 :root {
-  --shimmer-base: var(--color-gray-200);
-  --shimmer-glow: #ffffff;
+  --shimmer-base: var(--color-gray-100);
+  --shimmer-glow: var(--color-white);
 }
 
 .dark-mode {
-  --shimmer-base: var(--color-gray-700);
-  --shimmer-glow: var(--color-gray-600);
+  --shimmer-base: var(--color-gray-800);
+  --shimmer-glow: var(--color-gray-700);
 }
 
 @keyframes shimmer-sweep {
@@ -479,4 +479,41 @@ a:focus-visible {
     transform: translate3d(140%, 0, 0) rotate(18deg);
     opacity: 0;
   }
+}
+
+/* ========================================
+   SWIPER CUSTOM STYLES
+   ======================================== */
+
+.swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.swiper-slide {
+  background: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Pagination dots */
+.swiper-pagination-bullet {
+  background: #fff;
+  opacity: 0.5;
+  width: 8px;
+  height: 8px;
+  transition: all 0.3s ease;
+}
+
+.swiper-pagination-bullet-active {
+  background: var(--color-brand-600, #0072b0);
+  opacity: 1;
+  width: 10px;
+  height: 10px;
+}
+
+/* Custom pagination position */
+.swiper-pagination {
+  bottom: 12px !important;
 }
