@@ -345,6 +345,7 @@ export default function ProfilePage() {
 // ── Telegram Section ──────────────────────────────────────────────────
 
 function TelegramSection() {
+  const { t } = useTranslation();
   const { data: account, isLoading } = useTelegramAccount();
   const notLinked = account === null;
   const { refetch: fetchLink, isFetching: linkLoading } = useTelegramConnectLink(false);
@@ -360,7 +361,7 @@ function TelegramSection() {
 
   if (isLoading) {
     return (
-      <Section title="Telegram">
+      <Section title={t('profile.telegramSection')}>
         <div className="py-4"><SkeletonRow /><SkeletonRow /></div>
       </Section>
     );
@@ -377,9 +378,9 @@ function TelegramSection() {
             <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-success-500 border-2 border-white dark:border-bg-secondary animate-pulse" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-fg-primary mb-0.5">Telegram hisobingizni ulang</p>
+            <p className="text-sm font-semibold text-fg-primary mb-0.5">{t('profile.telegramConnectTitle')}</p>
             <p className="text-xs text-fg-tertiary mb-3 leading-relaxed">
-              Yangiliklardan tezda xabardor bo&apos;lish va muhim bildirishnomalarni o&apos;tkazib yubormaslik uchun Telegram hisobingizni ulang.
+              {t('profile.telegramConnectDesc')}
             </p>
             <button
               type="button"
@@ -388,7 +389,7 @@ function TelegramSection() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0088cc] hover:bg-[#006daa] text-white text-sm font-semibold transition-colors disabled:opacity-60"
             >
               {linkLoading ? <Spinner className="size-4" /> : <TelegramLogoIcon size={16} weight="fill" />}
-              {linkLoading ? 'Ulanmoqda...' : 'Telegram ulash'}
+              {linkLoading ? t('profile.telegramConnecting') : t('profile.telegramConnect')}
             </button>
           </div>
         </div>
@@ -399,14 +400,14 @@ function TelegramSection() {
   if (!account) return null;
 
   return (
-    <Section title="Telegram">
+    <Section title={t('profile.telegramSection')}>
       <div className="py-3">
         <div className="flex items-center gap-4 py-3 border-b border-border-secondary">
           <div className="size-9 rounded-xl bg-[#0088cc] flex items-center justify-center shrink-0">
             <TelegramLogoIcon size={16} weight="fill" className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">Foydalanuvchi</p>
+            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">{t('profile.telegramUsername')}</p>
             <p className="text-base font-semibold text-fg-primary">
               {account.telegram_username ? `@${account.telegram_username}` : account.telegram_fullname}
             </p>
@@ -418,7 +419,7 @@ function TelegramSection() {
               <PhoneIcon size={16} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">Telefon</p>
+              <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">{t('profile.telegramPhone')}</p>
               <p className="text-base font-semibold text-fg-primary">{account.phone_number}</p>
             </div>
           </div>
@@ -428,9 +429,9 @@ function TelegramSection() {
             <CheckCircleIcon size={16} weight="fill" className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">Holat</p>
+            <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest leading-none mb-1">{t('profile.telegramStatus')}</p>
             <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-success-50 dark:bg-success-600/10 text-success-700 dark:text-success-400">
-              <CheckCircleIcon size={11} weight="fill" />Ulangan
+              <CheckCircleIcon size={11} weight="fill" />{t('profile.telegramConnected')}
             </span>
           </div>
           <button
@@ -439,7 +440,7 @@ function TelegramSection() {
             disabled={disconnecting}
             className="text-xs font-medium text-error-600 dark:text-error-400 hover:underline disabled:opacity-60"
           >
-            {disconnecting ? 'Uzilmoqda...' : 'Uzish'}
+            {disconnecting ? t('profile.telegramDisconnecting') : t('profile.telegramDisconnect')}
           </button>
         </div>
       </div>
@@ -448,10 +449,10 @@ function TelegramSection() {
         isOpen={showDisconnect}
         onClose={() => setShowDisconnect(false)}
         onConfirm={() => { disconnect(); setShowDisconnect(false); }}
-        title="Telegramni uzish"
-        description="Telegram hisobingiz uziladi va bildirishnomalar to'xtatiladi. Davom etishni xohlaysizmi?"
-        confirmLabel="Uzish"
-        cancelLabel="Bekor qilish"
+        title={t('profile.telegramDisconnectTitle')}
+        description={t('profile.telegramDisconnectDesc')}
+        confirmLabel={t('profile.telegramDisconnect')}
+        cancelLabel={t('profile.logoutCancel')}
         variant="danger"
         isLoading={disconnecting}
       />

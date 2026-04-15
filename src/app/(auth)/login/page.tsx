@@ -5,7 +5,6 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -24,7 +23,6 @@ const LoginSchema = z.object({
 type LoginFormValues = z.infer<typeof LoginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,17 +39,25 @@ export default function LoginPage() {
         email: data.email,
         password: data.password,
       });
-      if (res?.error) {
-        const msg = res.error === "CredentialsSignin"
+
+      // res?.ok tekshirish majburiy: res null bo'lsa yoki ok:false bo'lsa xato
+      if (!res?.ok || res.error) {
+        const msg = res?.error === "CredentialsSignin"
           ? "Email yoki parol noto'g'ri."
-          : res.error;
+          : res?.error ?? "Tizimga kirishda xatolik yuz berdi.";
         toast.error(t("common.error"), { description: msg });
-      } else {
-        toast.success(t("common.success"), {
-          description: t("auth.loginWelcome"),
-        });
-        router.push("/");
+        return;
       }
+
+      toast.success(t("common.success"), {
+        description: t("auth.loginWelcome"),
+      });
+
+      // window.location.href ishlatiladi — bu to'liq HTTP so'rov yuboradi.
+      // router.push() client-side navigation qiladi va ba'zida middleware
+      // cookie'ni hali o'qiy olmay /login ga qaytarib yuboradi (race condition).
+      // Hard redirect bilan bu muammo yo'q bo'ladi.
+      window.location.href = "/";
     } catch {
       toast.error(t("common.error"));
     } finally {

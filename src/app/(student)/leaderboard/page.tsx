@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Trophy, FunnelSimple } from '@phosphor-icons/react';
+import { Trophy, FunnelSimple, Medal } from '@phosphor-icons/react';
 import { useLeaderboard, useMyLeaderboardEntry, type LeaderboardItem, type LeaderboardFilters } from '@/hooks/api/use-leaderboard';
 import { useFaculties, useYearLevels, useStudentMe } from '@/hooks/api/use-profile';
 import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
@@ -130,6 +130,25 @@ const PODIUM_CFG = {
     standBg: 'bg-gradient-to-b from-orange-400 to-orange-500',
     numColor: 'text-orange-500',
     coinVariant: 'bronze' as const,
+  },
+} as const;
+
+// Tableda tied top-3 uchun — medal icon va rang konfiguratsiyasi
+const MEDAL_RANK = {
+  1: {
+    icon: (sz: number) => <Medal size={sz} weight="fill" className="text-amber-500 dark:text-amber-400" />,
+    rankColor: 'text-amber-600 dark:text-amber-400',
+    rowAccent: 'border-l-[3px] border-l-amber-400 dark:border-l-amber-500',
+  },
+  2: {
+    icon: (sz: number) => <Medal size={sz} weight="fill" className="text-slate-400 dark:text-slate-300" />,
+    rankColor: 'text-slate-500 dark:text-slate-300',
+    rowAccent: 'border-l-[3px] border-l-slate-400 dark:border-l-slate-400',
+  },
+  3: {
+    icon: (sz: number) => <Medal size={sz} weight="fill" className="text-orange-500 dark:text-orange-400" />,
+    rankColor: 'text-orange-600 dark:text-orange-400',
+    rowAccent: 'border-l-[3px] border-l-orange-400 dark:border-l-orange-500',
   },
 } as const;
 
@@ -392,19 +411,36 @@ export default function LeaderboardPage() {
                         const isMe = myId === item.student_public_id;
                         const name = shortName(item.full_name);
                         const initial = name.charAt(0).toUpperCase();
+                        const rank = item.rank ?? (idx + (isPage1 ? 4 : 1));
+                        // Tableda teng o'rinda turgan top-3 uchun medal ko'rsatiladi
+                        const medal = rank <= 3 ? MEDAL_RANK[rank as 1 | 2 | 3] : null;
+
                         return (
                           <tr
                             key={item.student_public_id || `r-${idx}`}
                             className={[
                               'border-b border-border-secondary last:border-0 transition-colors',
                               isMe ? 'bg-brand-50/60 dark:bg-brand-950/30' : 'hover:bg-bg-primary/50',
+                              medal ? medal.rowAccent : '',
                             ].join(' ')}
                           >
+                            {/* Rank ustuni — medal yoki oddiy raqam */}
                             <td className="py-3 px-2 sm:px-4">
-                              <span className={`text-xs sm:text-sm font-bold tabular-nums ${isMe ? 'text-brand-600 dark:text-brand-400' : 'text-fg-quaternary'}`}>
-                                {item.rank ?? (idx + (isPage1 ? 4 : 1))}
-                              </span>
+                              {medal ? (
+                                <div className="flex items-center gap-1">
+                                  {medal.icon(20)}
+                                  <span className={`text-base font-black tabular-nums leading-none ${medal.rankColor}`}>
+                                    {rank}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className={`text-xs sm:text-sm font-bold tabular-nums ${isMe ? 'text-brand-600 dark:text-brand-400' : 'text-fg-quaternary'}`}>
+                                  {rank}
+                                </span>
+                              )}
                             </td>
+
+                            {/* Ism ustuni */}
                             <td className="py-3 px-2 sm:px-4">
                               <div className="flex items-center gap-2">
                                 <div className="size-7 sm:size-9 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
@@ -422,11 +458,16 @@ export default function LeaderboardPage() {
                                 </div>
                               </div>
                             </td>
+
                             <td className="py-3 px-2 sm:px-4 hidden md:table-cell">
                               <p className="text-xs text-fg-tertiary truncate max-w-[200px]">{item.faculty || '—'}</p>
                             </td>
                             <td className="py-3 px-2 sm:px-4 text-right">
-                              <CoinPill amount={item.total_coins} size="sm" variant="primary" />
+                              <CoinPill
+                                amount={item.total_coins}
+                                size="sm"
+                                variant={medal ? (['gold', 'silver', 'bronze'] as const)[rank - 1] : 'primary'}
+                              />
                             </td>
                           </tr>
                         );
