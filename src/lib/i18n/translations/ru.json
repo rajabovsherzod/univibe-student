@@ -147,8 +147,18 @@
     "statusWaited": "Ожидает",
     "statusRejected": "Отклонён",
     "telegramSection": "Telegram",
+    "telegramConnectTitle": "Подключите Telegram",
+    "telegramConnectDesc": "Подключите аккаунт Telegram, чтобы быть в курсе новостей и не пропускать важные уведомления.",
     "telegramConnect": "Подключить Telegram",
+    "telegramConnecting": "Подключение...",
+    "telegramUsername": "Пользователь",
+    "telegramPhone": "Телефон",
+    "telegramStatus": "Статус",
+    "telegramConnected": "Подключён",
     "telegramDisconnect": "Отключить",
+    "telegramDisconnecting": "Отключение...",
+    "telegramDisconnectTitle": "Отключить Telegram",
+    "telegramDisconnectDesc": "Аккаунт Telegram будет отключён и уведомления прекратятся. Продолжить?",
     "personalInfoSection": "Личные данные",
     "academicSection": "Академические данные",
     "logoutSection": "Выход из системы",
@@ -216,7 +226,8 @@
     "profile": "Профиль",
     "myEvents": "Мои мероприятия",
     "balance": "Баланс",
-    "notifications": "Уведомления"
+    "notifications": "Уведомления",
+    "more": "Ещё"
   },
   "telegram": {
     "bannerTitle": "Подключите Telegram",

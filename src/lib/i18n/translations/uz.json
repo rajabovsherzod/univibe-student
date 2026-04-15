@@ -147,8 +147,18 @@
     "statusWaited": "Kutilmoqda",
     "statusRejected": "Rad etilgan",
     "telegramSection": "Telegram",
+    "telegramConnectTitle": "Telegram hisobingizni ulang",
+    "telegramConnectDesc": "Yangiliklardan tezda xabardor bo'lish va muhim bildirishnomalarni o'tkazib yubormaslik uchun Telegram hisobingizni ulang.",
     "telegramConnect": "Telegram ulash",
+    "telegramConnecting": "Ulanmoqda...",
+    "telegramUsername": "Foydalanuvchi",
+    "telegramPhone": "Telefon",
+    "telegramStatus": "Holat",
+    "telegramConnected": "Ulangan",
     "telegramDisconnect": "Uzish",
+    "telegramDisconnecting": "Uzilmoqda...",
+    "telegramDisconnectTitle": "Telegramni uzish",
+    "telegramDisconnectDesc": "Telegram hisobingiz uziladi va bildirishnomalar to'xtatiladi. Davom etishni xohlaysizmi?",
     "personalInfoSection": "Shaxsiy ma'lumotlar",
     "academicSection": "Akademik ma'lumotlar",
     "logoutSection": "Tizimdan chiqish",
@@ -216,7 +226,8 @@
     "profile": "Profil",
     "myEvents": "Mening tadbirlarim",
     "balance": "Balans",
-    "notifications": "Bildirishnomalar"
+    "notifications": "Bildirishnomalar",
+    "more": "Ko'proq"
   },
   "telegram": {
     "bannerTitle": "Telegram ulang",

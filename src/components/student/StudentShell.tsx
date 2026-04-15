@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   HouseIcon,
   CalendarBlankIcon,
@@ -20,6 +21,7 @@ import {
   SignOutIcon,
   ClockIcon,
   XCircleIcon,
+  DotsThreeOutlineIcon,
 } from '@phosphor-icons/react/dist/ssr';
 import { useStudentMe } from '@/hooks/api/use-profile';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
@@ -52,11 +54,16 @@ const mainNavItems: NavConfigItem[] = [
   { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
 ];
 
-const mobileNavItems: NavItem[] = [
+// Bottom bardagi 4 ta asosiy tab
+const primaryMobileNav: NavItem[] = [
   { href: '/', labelKey: 'nav.home', icon: HouseIcon },
   { href: '/events', labelKey: 'nav.events', icon: CalendarBlankIcon },
   { href: '/leaderboard', labelKey: 'nav.leaderboard', icon: TrophyIcon },
   { href: '/shop', labelKey: 'nav.shop', icon: StorefrontIcon },
+];
+
+// "More" sheet ichidagi qo'shimcha itemlar
+const moreMobileNav: NavItem[] = [
   { href: '/my-events', labelKey: 'nav.myEvents', icon: CalendarCheckIcon },
   { href: '/balance', labelKey: 'nav.balance', icon: WalletIcon },
   { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
@@ -87,6 +94,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   // Activity tracking: inactivity logout + proactive token refresh
   useActivityTracker();
   const [isDark, setIsDark] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // Sahifa o'zgarganda "More" sheetni yopish
+  useEffect(() => { setMoreOpen(false); }, [pathname]);
 
   // ── Zustand store: cache profile data for instant sidebar rendering
   const { profile: cachedProfile, setProfile: setCachedProfile } = useProfileStore();
@@ -341,23 +352,24 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile Bottom Nav - 7-item Layout */}
+      {/* Mobile Bottom Nav — 4 tab + More */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border-secondary bg-bg-secondary/95 backdrop-blur-sm">
-        <div className="flex items-center h-16 px-0.5">
-          {mobileNavItems.map((item) => {
+        <div className="flex items-center h-16">
+          {/* 4 ta asosiy tab */}
+          {primaryMobileNav.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            const isLocked = (!displayStatus || displayStatus !== 'approved') && item.href !== '/personal-info';
+            const isLocked = (!displayStatus || displayStatus !== 'approved');
 
             if (isLocked) {
               return (
                 <button
                   key={item.href}
                   onClick={() => toast.warning(t('personalInfo.fillFirstMessage') || "Iltimos, avval shaxsiy ma'lumotlaringizni to'ldiring!")}
-                  className="flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5 opacity-50 cursor-not-allowed text-fg-quaternary"
+                  className="flex flex-col items-center justify-center flex-1 h-full gap-1 opacity-40 cursor-not-allowed text-fg-quaternary"
                 >
-                  <Icon size={20} weight="regular" />
-                  <span className="text-[9px] font-medium w-full text-center truncate px-0.5">{t(item.labelKey)}</span>
+                  <Icon size={22} weight="regular" />
+                  <span className="text-[10px] font-medium">{t(item.labelKey)}</span>
                 </button>
               );
             }
@@ -366,15 +378,108 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5 transition-colors ${active ? 'text-brand-600' : 'text-fg-quaternary hover:text-fg-secondary'}`}
+                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
+                  active ? 'text-brand-600' : 'text-fg-quaternary hover:text-fg-secondary'
+                }`}
               >
-                <Icon size={20} weight={active ? 'fill' : 'regular'} />
-                <span className="text-[9px] font-medium w-full text-center truncate px-0.5">{t(item.labelKey)}</span>
+                <Icon size={22} weight={active ? 'fill' : 'regular'} />
+                <span className="text-[10px] font-medium">{t(item.labelKey)}</span>
               </Link>
             );
           })}
+
+          {/* More tugmasi */}
+          {(() => {
+            const moreIsActive = moreMobileNav.some(item => isActive(item.href));
+            const highlighted = moreOpen || moreIsActive;
+            return (
+              <button
+                onClick={() => setMoreOpen(prev => !prev)}
+                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
+                  highlighted ? 'text-brand-600' : 'text-fg-quaternary hover:text-fg-secondary'
+                }`}
+              >
+                <DotsThreeOutlineIcon size={22} weight={highlighted ? 'fill' : 'regular'} />
+                <span className="text-[10px] font-medium">{t('nav.more') || 'Ko\'proq'}</span>
+              </button>
+            );
+          })()}
         </div>
       </nav>
+
+      {/* More — bottom sheet */}
+      <AnimatePresence>
+        {moreOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMoreOpen(false)}
+              className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+            />
+
+            {/* Sheet */}
+            <motion.div
+              key="sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 380, mass: 0.9 }}
+              className="lg:hidden fixed bottom-0 inset-x-0 z-50 rounded-t-3xl bg-bg-secondary border-t border-border-secondary shadow-2xl"
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-[5px] rounded-full bg-border-secondary" />
+              </div>
+
+              {/* Sheet items — 3 column grid */}
+              <div className="grid grid-cols-3 gap-3 px-5 pt-2 pb-8">
+                {moreMobileNav.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  const isLocked = (!displayStatus || displayStatus !== 'approved');
+
+                  if (isLocked) {
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={() => {
+                          setMoreOpen(false);
+                          toast.warning(t('personalInfo.fillFirstMessage') || "Iltimos, avval shaxsiy ma'lumotlaringizni to'ldiring!");
+                        }}
+                        className="flex flex-col items-center gap-2.5 py-4 px-2 rounded-2xl bg-bg-tertiary opacity-40 cursor-not-allowed"
+                      >
+                        <Icon size={28} weight="regular" />
+                        <span className="text-xs font-semibold text-fg-tertiary text-center">{t(item.labelKey)}</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMoreOpen(false)}
+                      className={`flex flex-col items-center gap-2.5 py-4 px-2 rounded-2xl transition-all active:scale-95 ${
+                        active
+                          ? 'bg-brand-600 text-white shadow-sm'
+                          : 'bg-bg-tertiary text-fg-secondary hover:bg-bg-primary'
+                      }`}
+                    >
+                      <Icon size={28} weight={active ? 'fill' : 'regular'} />
+                      <span className="text-xs font-semibold text-center leading-tight">{t(item.labelKey)}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

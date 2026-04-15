@@ -147,8 +147,18 @@
     "statusWaited": "Pending",
     "statusRejected": "Rejected",
     "telegramSection": "Telegram",
+    "telegramConnectTitle": "Connect your Telegram",
+    "telegramConnectDesc": "Connect your Telegram account to stay informed about news and never miss important notifications.",
     "telegramConnect": "Connect Telegram",
+    "telegramConnecting": "Connecting...",
+    "telegramUsername": "Username",
+    "telegramPhone": "Phone",
+    "telegramStatus": "Status",
+    "telegramConnected": "Connected",
     "telegramDisconnect": "Disconnect",
+    "telegramDisconnecting": "Disconnecting...",
+    "telegramDisconnectTitle": "Disconnect Telegram",
+    "telegramDisconnectDesc": "Your Telegram account will be disconnected and notifications will stop. Do you want to continue?",
     "personalInfoSection": "Personal Information",
     "academicSection": "Academic Information",
     "logoutSection": "Sign Out",
@@ -216,7 +226,8 @@
     "profile": "Profile",
     "myEvents": "My Events",
     "balance": "Balance",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "more": "More"
   },
   "telegram": {
     "bannerTitle": "Connect Telegram",
