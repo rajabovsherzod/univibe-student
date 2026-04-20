@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { parseDate } from "@internationalized/date";
 import Image from "next/image";
+import { getLogoutUrl } from "@/lib/get-app-url";
 import {
   CameraIcon, BuildingsIcon, SignOutIcon, LockIcon, ClockIcon,
 } from "@phosphor-icons/react";
@@ -161,7 +162,7 @@ export default function SetupProfilePage() {
     try { localStorage.removeItem("user-storage"); } catch { }
     try { localStorage.removeItem("user-profile-storage"); } catch { }
     try { sessionStorage.clear(); } catch { }
-    signOut({ callbackUrl: `${window.location.origin}/login` });
+    signOut({ callbackUrl: getLogoutUrl() });
   };
 
   const isSubmitting = updateProfile.isPending;

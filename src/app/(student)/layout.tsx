@@ -5,7 +5,12 @@ import { StudentShell } from '@/components/student/StudentShell';
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session) redirect('/login');
+  
+  // Middleware allaqachon authentication'ni tekshiradi
+  // Bu yerda faqat session mavjudligini tasdiqlash kifoya
+  if (!session) {
+    redirect('/login');
+  }
 
   return <StudentShell>{children}</StudentShell>;
 }

@@ -6,6 +6,7 @@ export default withAuth(
     const token = req.nextauth.token;
     const { pathname } = req.nextUrl;
 
+    // Token yo'q bo'lsa, withAuth callback'i allaqachon login'ga yo'naltiradi
     if (!token) return NextResponse.next();
 
     const studentStatus = token.studentStatus as string | undefined;
