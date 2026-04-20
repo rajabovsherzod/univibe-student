@@ -6,6 +6,7 @@ import type { ComponentType } from 'react';
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from 'sonner';
+import { getLogoutUrl } from '@/lib/get-app-url';
 import {
   UserIcon, CameraIcon,
   CheckCircleIcon, XCircleIcon, ClockIcon, GraduationCapIcon, IdentificationCardIcon,
@@ -492,7 +493,7 @@ function LogoutSection() {
           localStorage.removeItem('user-storage');
           localStorage.removeItem('user-profile-storage');
           sessionStorage.clear();
-          signOut({ callbackUrl: `${window.location.origin}/login` });
+          signOut({ callbackUrl: getLogoutUrl() });
         }}
         title={t('profile.logoutTitle')}
         description={t('profile.logoutDesc')}

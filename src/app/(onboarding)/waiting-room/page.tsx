@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { parseDate } from "@internationalized/date";
+import { getLogoutUrl } from "@/lib/get-app-url";
 import {
   UserIcon, PhoneIcon, CalendarBlankIcon, GraduationCapIcon,
   BuildingsIcon, PencilSimpleIcon, ClockIcon, SignOutIcon, CameraIcon,
@@ -203,7 +204,7 @@ export default function WaitingRoomPage() {
 
   const handleSignOut = () => {
     try { localStorage.clear(); sessionStorage.clear(); } catch { }
-    signOut({ callbackUrl: `${window.location.origin}/login` });
+    signOut({ callbackUrl: getLogoutUrl() });
   };
 
   const displayName = profile?.full_name?.replace(/\bUser\b/gi, "").trim() || session?.user?.name || "Talaba";

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -24,6 +25,8 @@ type LoginFormValues = z.infer<typeof LoginSchema>;
 
 export default function LoginPage() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const { update } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
   const { control, handleSubmit, formState } = useForm<LoginFormValues>({
@@ -53,10 +56,13 @@ export default function LoginPage() {
         description: t("auth.loginWelcome"),
       });
 
-      // window.location.href ishlatiladi — bu to'liq HTTP so'rov yuboradi.
-      // router.push() client-side navigation qiladi va ba'zida middleware
-      // cookie'ni hali o'qiy olmay /login ga qaytarib yuboradi (race condition).
-      // Hard redirect bilan bu muammo yo'q bo'ladi.
+      // Session'ni yangilash - bu NextAuth session'ni qayta yuklaydi
+      await update();
+      
+      // Kichik kechikish - session cookie'larining to'liq o'rnatilishini ta'minlash uchun
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Hard redirect - bu server-side session'ni to'liq qayta yuklaydi
       window.location.href = "/";
     } catch {
       toast.error(t("common.error"));
@@ -149,7 +155,15 @@ export default function LoginPage() {
           {/* Google button */}
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
+            onClick={async () => {
+              setIsLoading(true);
+              try {
+                await signIn("google", { callbackUrl: "/" });
+              } catch {
+                toast.error(t("common.error"));
+                setIsLoading(false);
+              }
+            }}
             disabled={isLoading}
             className="flex w-full items-center justify-center gap-3 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >

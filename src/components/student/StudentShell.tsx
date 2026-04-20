@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import { getLogoutUrl } from '@/lib/get-app-url';
 import {
   HouseIcon,
   CalendarBlankIcon,
@@ -295,7 +296,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem('user-storage');
                 localStorage.removeItem('user-profile-storage');
                 sessionStorage.clear();
-                signOut({ callbackUrl: `${window.location.origin}/login` });
+                signOut({ callbackUrl: getLogoutUrl() });
               }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-error-600 dark:text-error-500 hover:bg-error-50 dark:hover:bg-error-600/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500"
             >
