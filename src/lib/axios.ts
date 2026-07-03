@@ -1,8 +1,8 @@
 import axios from "axios";
 import { API_CONFIG } from "@/lib/api/config";
-import { getSession, signOut } from "next-auth/react";
+import { getSession } from "next-auth/react";
 import { forceTokenRefresh } from "@/lib/session-updater";
-import { getLogoutUrl } from "@/lib/get-app-url";
+import { performLogout } from "@/lib/logout";
 
 declare module "next-auth" {
   interface Session {
@@ -102,7 +102,7 @@ axiosInstance.interceptors.response.use(
         localStorage.removeItem("user-storage");
         localStorage.removeItem("user-profile-storage");
         sessionStorage.clear();
-        signOut({ callbackUrl: getLogoutUrl() });
+        performLogout();
       }
     }
 

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import { AppProvider } from "@/providers/app-provider";
 import { ThemeToaster } from "@/providers/theme-toaster";
+import NextTopLoader from "nextjs-toploader";
 import type { Locale } from "@/lib/i18n/i18n";
 import "./globals.css";
 
@@ -182,6 +183,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.variable} antialiased`}>
+        <NextTopLoader color="#0284c7" height={3} showSpinner={false} shadow="0 0 10px #0284c7,0 0 5px #0284c7" />
         <AppProvider initialLocale={localeCookie} initialUser={initialUser} session={session}>
           {children}
           <ThemeToaster />

@@ -110,36 +110,31 @@ export const InputBase = ({
       ref={groupRef}
       className={({ isFocusWithin, isDisabled, isInvalid }) =>
         cx(
-          // ✅ base
-          "relative flex w-full flex-row place-content-center place-items-center border rounded-lg bg-bg-secondary shadow-xs",
-          "border-border-primary transition-[border-color] duration-100 ease-linear",
+          // ✅ base — inset ring (no layout shift) on a contrasting surface,
+          // matching the admin panel's input for a clean, consistent feel.
+          "relative flex w-full flex-row place-content-center place-items-center rounded-lg bg-bg-primary shadow-xs",
+          "ring-1 ring-border-primary ring-inset transition-shadow duration-100 ease-linear",
 
-          /**
-           * ✅ OQ HALO'NI BUTUNLAY O‘CHIRISH:
-           * ring-offset default oq bo‘ladi. Shuning uchun har doim 0 qilamiz.
-           */
+          // Kill the default white ring-offset halo.
           "!ring-offset-0 !ring-offset-transparent",
 
-          /**
-           * ✅ outline ham butunlay yo‘q:
-           * (ba’zi browserlar/ global css fokusda oq outline chizadi)
-           */
+          // No white focus outline (some browsers / global css draw one).
           "!outline-none focus-within:!outline-none",
 
-          // ✅ focus = thin brand ring without thick glow
-          isFocusWithin && !isDisabled && !isInvalid && "!border-brand-500",
+          // ✅ focus = brand ring (like the admin search/input)
+          isFocusWithin && !isDisabled && !isInvalid && "ring-2 ring-brand-500",
 
           // disabled
-          isDisabled && "cursor-not-allowed bg-disabled_subtle border-disabled",
-          "group-disabled:cursor-not-allowed group-disabled:bg-disabled_subtle group-disabled:border-disabled",
+          isDisabled && "cursor-not-allowed bg-disabled_subtle ring-disabled",
+          "group-disabled:cursor-not-allowed group-disabled:bg-disabled_subtle group-disabled:ring-disabled",
 
           // invalid
-          isInvalid && "!border-error-500",
-          "group-invalid:!border-error-500",
+          isInvalid && "ring-error-500",
+          "group-invalid:ring-error-500",
 
           // invalid + focus
-          isInvalid && isFocusWithin && "!border-error-500",
-          isFocusWithin && "group-invalid:!border-error-500",
+          isInvalid && isFocusWithin && "ring-2 ring-error-500",
+          isFocusWithin && "group-invalid:ring-2 group-invalid:ring-error-500",
 
           context?.wrapperClassName,
           wrapperClassName,

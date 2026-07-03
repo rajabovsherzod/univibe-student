@@ -175,6 +175,55 @@
   --color-brand-solid: var(--color-brand-600);
   --color-brand-solid_hover: var(--color-brand-700);
 
+  /* Disabled + placeholder + quaternary state tokens.
+     Without these, utilities like `ring-disabled`, `bg-disabled_subtle` and
+     `text-placeholder` resolved to `currentColor` — which rendered white in dark
+     mode / black in light mode. That's the stray border that flashed on the
+     inputs while a submit button was loading (inputs go disabled → ring-disabled).
+     All values are theme-aware so they adapt to light/dark automatically. */
+  --color-disabled: var(--color-border-primary);
+  --color-disabled_subtle: var(--color-bg-tertiary);
+  --color-fg-disabled_subtle: var(--color-fg-disabled);
+  --color-placeholder: var(--color-fg-tertiary);
+  --color-placeholder_subtle: var(--color-fg-disabled);
+  --color-fg-quaternary: var(--color-fg-tertiary);
+  --color-fg-quaternary_hover: var(--color-fg-secondary);
+  --color-fg-error-secondary: var(--color-error-500);
+  --color-fg-brand-primary: var(--color-brand-600);
+
+  /* ── UntitledUI property-namespaced utilities ────────────────────────────
+     Tailwind v4 resolves the text, bg, ring and outline utilities from these
+     property namespaces first (so text-primary and bg-primary can differ). The
+     base Button variants and the date-picker/calendar rely on them; without
+     them those utilities fell back to currentColor/nothing (the broken look).
+     All values are theme-aware. */
+  --text-color-primary: var(--color-fg-primary);
+  --text-color-secondary: var(--color-fg-secondary);
+  --text-color-secondary_hover: var(--color-fg-primary);
+  --text-color-tertiary: var(--color-fg-tertiary);
+  --text-color-tertiary_hover: var(--color-fg-secondary);
+  --text-color-quaternary: var(--color-fg-tertiary);
+  --text-color-disabled: var(--color-fg-disabled);
+  --text-color-placeholder: var(--color-placeholder);
+
+  --background-color-primary: var(--color-bg-primary);
+  --background-color-primary_hover: var(--color-bg-secondary);
+  --background-color-secondary: var(--color-bg-secondary);
+  --background-color-secondary_hover: var(--color-bg-tertiary);
+  --background-color-tertiary: var(--color-bg-tertiary);
+  --background-color-active: var(--color-bg-tertiary);
+  --background-color-disabled: var(--color-bg-tertiary);
+  --background-color-disabled_subtle: var(--color-bg-secondary);
+  --color-bg-active: var(--color-bg-tertiary);
+
+  --ring-color-primary: var(--color-border-primary);
+  --ring-color-secondary: var(--color-border-secondary);
+  --ring-color-brand: var(--color-brand-500);
+  --ring-color-disabled: var(--color-border-primary);
+
+  --outline-color-focus-ring: var(--color-brand-500);
+  --outline-color-brand: var(--color-brand-500);
+
   --color-border-primary: var(--color-border-primary);
   --color-border-secondary: var(--color-border-secondary);
   --color-border-brand: var(--color-border-brand);
@@ -296,6 +345,19 @@ a:focus-visible {
   outline: none;
   box-shadow: var(--ring-brand-shadow);
   border-radius: var(--radius-sm);
+}
+
+/* Theme-switch flash guard: while <html> carries this class (added for one
+   frame by applyTheme), suppress ALL transitions/animations so the theme swaps
+   instantly instead of every element animating its color — kills the
+   "input hangs then its color changes" glitch. */
+.disable-transitions,
+.disable-transitions *,
+.disable-transitions *::before,
+.disable-transitions *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
 }
 
 /* Scrollbar Styles */

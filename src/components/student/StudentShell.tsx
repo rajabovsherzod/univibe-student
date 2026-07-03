@@ -4,10 +4,11 @@ import { useState, useEffect, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { getLogoutUrl } from '@/lib/get-app-url';
+import { performLogout } from '@/lib/logout';
+import { applyTheme } from '@/lib/theme';
 import {
   HouseIcon,
   CalendarBlankIcon,
@@ -23,8 +24,11 @@ import {
   ClockIcon,
   XCircleIcon,
   DotsThreeOutlineIcon,
+  UsersThreeIcon,
+  ShieldStarIcon,
 } from '@phosphor-icons/react/dist/ssr';
 import { useStudentMe } from '@/hooks/api/use-profile';
+import { useManagedClubs } from '@/hooks/api/use-clubs';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { useTranslation } from '@/lib/i18n/i18n';
@@ -38,6 +42,8 @@ interface NavItem {
   href: string;
   labelKey: string;
   icon: React.ComponentType<{ size?: number; weight?: 'regular' | 'fill' | 'bold' }>;
+  /** only shown when the student leads at least one club */
+  requiresManaged?: boolean;
 }
 
 interface NavDivider { divider: true }
@@ -46,10 +52,12 @@ type NavConfigItem = NavItem | NavDivider;
 const mainNavItems: NavConfigItem[] = [
   { href: '/', labelKey: 'nav.home', icon: HouseIcon },
   { href: '/events', labelKey: 'nav.events', icon: CalendarBlankIcon },
+  { href: '/clubs', labelKey: 'nav.clubs', icon: UsersThreeIcon },
   { href: '/leaderboard', labelKey: 'nav.leaderboard', icon: TrophyIcon },
   { href: '/shop', labelKey: 'nav.shop', icon: StorefrontIcon },
   { divider: true },
   { href: '/my-events', labelKey: 'nav.myEvents', icon: CalendarCheckIcon },
+  { href: '/my-clubs', labelKey: 'nav.myClubs', icon: ShieldStarIcon, requiresManaged: true },
   { href: '/balance', labelKey: 'nav.balance', icon: WalletIcon },
   { divider: true },
   { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
@@ -65,6 +73,8 @@ const primaryMobileNav: NavItem[] = [
 
 // "More" sheet ichidagi qo'shimcha itemlar
 const moreMobileNav: NavItem[] = [
+  { href: '/clubs', labelKey: 'nav.clubs', icon: UsersThreeIcon },
+  { href: '/my-clubs', labelKey: 'nav.myClubs', icon: ShieldStarIcon, requiresManaged: true },
   { href: '/my-events', labelKey: 'nav.myEvents', icon: CalendarCheckIcon },
   { href: '/balance', labelKey: 'nav.balance', icon: WalletIcon },
   { href: '/profile', labelKey: 'nav.profile', icon: UserIcon },
@@ -89,8 +99,28 @@ function StatusBadge({ status, t }: { status: 'waited' | 'approved' | 'rejected'
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { data: session, update: updateSession } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const { data: profile } = useStudentMe();
+  const { data: managedClubs = [] } = useManagedClubs();
+  const hasManagedClubs = managedClubs.length > 0;
+
+  // Hide leadership-only nav items for students who don't lead any club.
+  const visibleMainNav = mainNavItems.filter(
+    (it) => !('requiresManaged' in it && it.requiresManaged) || hasManagedClubs,
+  );
+  const visibleMoreNav = moreMobileNav.filter((it) => !it.requiresManaged || hasManagedClubs);
+
+  // ── Force logout when the session is gone or the refresh token is dead ──
+  // Without this the app would sit on a stuck profile skeleton (no token → no
+  // profile) instead of signing the student out. Runs client-side so it fires
+  // mid-session too, not only on a full navigation (which middleware handles).
+  // Redirects to the env-configured public app URL (never a bare localhost).
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (status === 'unauthenticated' || session?.error === 'RefreshAccessTokenError') {
+      performLogout();
+    }
+  }, [status, session?.error]);
 
   // Activity tracking: inactivity logout + proactive token refresh
   useActivityTracker();
@@ -149,11 +179,8 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
-    document.documentElement.classList.toggle('dark-mode', next);
-    document.documentElement.classList.toggle('light-mode', !next);
-    // Write to BOTH localStorage AND cookie (server reads cookie for SSR)
-    localStorage.setItem('theme', next ? 'dark' : 'light');
-    document.cookie = `theme=${next ? 'dark' : 'light'};path=/;max-age=31536000;SameSite=Lax`;
+    // Shared helper: suppresses the transition flash + persists to storage+cookie.
+    applyTheme(next);
   };
 
   const isActive = (href: string) =>
@@ -233,7 +260,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           {/* Navigation */}
           <nav className="flex flex-1 flex-col px-2">
             <ul className="flex flex-col gap-y-0.5">
-              {mainNavItems.map((item, index) => {
+              {visibleMainNav.map((item, index) => {
                 if ('divider' in item) {
                   return <li key={`div-${index}`} className="my-2 h-px bg-border-secondary" />;
                 }
@@ -296,7 +323,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem('user-storage');
                 localStorage.removeItem('user-profile-storage');
                 sessionStorage.clear();
-                signOut({ callbackUrl: getLogoutUrl() });
+                performLogout();
               }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-error-600 dark:text-error-500 hover:bg-error-50 dark:hover:bg-error-600/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500"
             >
@@ -391,7 +418,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
           {/* More tugmasi */}
           {(() => {
-            const moreIsActive = moreMobileNav.some(item => isActive(item.href));
+            const moreIsActive = visibleMoreNav.some(item => isActive(item.href));
             const highlighted = moreOpen || moreIsActive;
             return (
               <button
@@ -439,7 +466,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
               {/* Sheet items — 3 column grid */}
               <div className="grid grid-cols-3 gap-3 px-5 pt-2 pb-8">
-                {moreMobileNav.map((item) => {
+                {visibleMoreNav.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
                   const isLocked = (!displayStatus || displayStatus !== 'approved');

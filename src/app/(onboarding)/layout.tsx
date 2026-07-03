@@ -15,8 +15,8 @@ export default async function OnboardingLayout({ children }: { children: React.R
   return (
     <div className="min-h-screen bg-bg-primary text-fg-primary flex flex-col antialiased">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-border-secondary bg-bg-primary/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-50 w-full border-b border-border-secondary bg-bg-primary/80 shadow-sm shadow-black/[0.04] backdrop-blur-md dark:shadow-black/20">
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Univibe logo */}
           <div className="flex items-center gap-2.5">
             <Image
@@ -43,7 +43,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
 
       {/* Page content — same max-width as header */}
       <main className="flex-1 w-full">
-        <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </div>
       </main>

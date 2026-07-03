@@ -32,9 +32,11 @@ export interface StudentMe {
   year_level_public_id: string | null;
   profile_photo_url: string | null;
   contact_phone_number: string | null;
-  status: "waited" | "approved" | "rejected";
-  created_at: string;
-  updated_at: string;
+  status: "waited" | "approved" | "rejected" | null;
+  /** false when the student profile row doesn't exist yet (setup not submitted). */
+  profile_exists?: boolean;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface Faculty {

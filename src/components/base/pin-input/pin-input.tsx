@@ -52,7 +52,7 @@ const Group = ({ inputClassName, containerClassName, width, maxLength = 4, ...pr
     const { id, size, disabled } = usePinInputContext();
 
     const heights = {
-        sm: "h-16.5",
+        sm: "h-10 sm:h-14",
         md: "h-20.5",
         lg: "h-24.5",
     };
@@ -67,7 +67,7 @@ const Group = ({ inputClassName, containerClassName, width, maxLength = 4, ...pr
             aria-label="Enter your pin"
             aria-labelledby={"pin-input-label-" + id}
             aria-describedby={"pin-input-description-" + id}
-            containerClassName={cx("flex flex-row gap-3", size === "sm" && "gap-2", heights[size], containerClassName)}
+            containerClassName={cx("flex flex-row gap-3", size === "sm" && "gap-1.5 sm:gap-2.5", heights[size], containerClassName)}
             className={cx("w-full! disabled:cursor-not-allowed", inputClassName)}
         />
     );
@@ -75,7 +75,7 @@ const Group = ({ inputClassName, containerClassName, width, maxLength = 4, ...pr
 Group.displayName = "Group";
 
 const sizes = {
-    sm: "size-16 px-2 py-0.5 text-display-lg font-medium",
+    sm: "size-10 sm:size-14 px-0 text-xl sm:text-2xl font-semibold",
     md: "size-20 px-2 py-2.5 text-display-lg font-medium",
     lg: "size-24 px-2 py-3 text-display-xl font-medium",
 };
@@ -90,15 +90,15 @@ const Slot = ({ index, className, ...props }: ComponentPropsWithRef<"div"> & { i
             {...props}
             aria-label={"Enter digit " + (index + 1) + " of " + slots.length}
             className={cx(
-                "relative flex items-center justify-center rounded-xl bg-primary text-center text-placeholder_subtle shadow-xs ring-1 ring-primary transition-[box-shadow,background-color] duration-100 ease-linear ring-inset",
+                "relative flex items-center justify-center rounded-xl bg-bg-primary text-center text-placeholder shadow-xs ring-1 ring-border-primary transition-[box-shadow,background-color,color] duration-100 ease-linear ring-inset",
                 sizes[size],
-                isFocused && slot?.isActive && "ring-2 ring-brand outline-2 outline-offset-2 outline-brand",
-                slot?.char && "text-brand-tertiary_alt ring-2 ring-brand",
-                disabled && "bg-disabled_subtle text-fg-disabled_subtle ring-disabled",
+                isFocused && slot?.isActive && "ring-2 ring-brand-500",
+                slot?.char && "text-primary ring-2 ring-brand-500",
+                disabled && "cursor-not-allowed bg-disabled_subtle text-disabled ring-disabled",
                 className,
             )}
         >
-            {slot?.char ? slot.char : slot?.hasFakeCaret ? <FakeCaret size={size} /> : 0}
+            {slot?.char ? slot.char : slot?.hasFakeCaret ? <FakeCaret size={size} /> : ""}
         </div>
     );
 };
@@ -108,7 +108,7 @@ const FakeCaret = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
     return (
         <div
             className={cx(
-                "pointer-events-none h-[1em] w-0.5 animate-caret-blink bg-fg-brand-primary",
+                "pointer-events-none h-[1.1em] w-0.5 animate-caret-blink bg-brand-500",
                 size === "lg" ? "text-display-xl font-medium" : "text-display-lg font-medium",
             )}
         />
@@ -117,7 +117,7 @@ const FakeCaret = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
 
 const Separator = (props: ComponentPropsWithRef<"p">) => {
     return (
-        <div role="separator" {...props} className={cx("text-center text-display-xl font-medium text-placeholder_subtle", props.className)}>
+        <div role="separator" {...props} className={cx("text-center text-display-xl font-medium text-placeholder", props.className)}>
             -
         </div>
     );

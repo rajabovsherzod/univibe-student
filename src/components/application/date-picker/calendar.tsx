@@ -18,6 +18,7 @@ import {
 } from "react-aria-components";
 import { Button } from "@/components/base/buttons/button";
 import { cx } from "@/utils/cx";
+import { useTranslation } from "@/lib/i18n/i18n";
 import { CalendarCell } from "./cell";
 import { DateInput } from "./date-input";
 
@@ -25,7 +26,8 @@ export const CalendarContextProvider = ({ children }: PropsWithChildren) => {
   const [value, onChange] = useState<DateValue | null>(null);
   const [focusedValue, onFocusChange] = useState<DateValue | undefined>();
 
-  return <AriaCalendarContext.Provider value={{ value, onChange, focusedValue, onFocusChange }}>{children}</AriaCalendarContext.Provider>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <AriaCalendarContext.Provider value={{ value, onChange, focusedValue, onFocusChange } as any}>{children}</AriaCalendarContext.Provider>;
 };
 
 const PresetButton = ({ value, children, ...props }: HTMLAttributes<HTMLButtonElement> & { value: CalendarDate }) => {
@@ -63,6 +65,7 @@ interface CalendarProps extends AriaCalendarProps<DateValue> {
 }
 
 export const Calendar = ({ highlightedDates, className, ...props }: CalendarProps) => {
+  const { t } = useTranslation();
   const context = useSlottedContext(AriaCalendarContext)!;
 
   const ContextWrapper = context ? Fragment : CalendarContextProvider;
@@ -78,7 +81,7 @@ export const Calendar = ({ highlightedDates, className, ...props }: CalendarProp
 
         <div className="flex gap-3">
           <DateInput className="flex-1" />
-          <PresetButton value={today(getLocalTimeZone())}>Bugun</PresetButton>
+          <PresetButton value={today(getLocalTimeZone())}>{t("datePicker.today")}</PresetButton>
         </div>
 
         <AriaCalendarGrid weekdayStyle="short" className="w-max">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Trophy, FunnelSimple, Medal } from '@phosphor-icons/react';
+import { Trophy, FunnelSimple } from '@phosphor-icons/react';
 import { useLeaderboard, useMyLeaderboardEntry, type LeaderboardItem, type LeaderboardFilters } from '@/hooks/api/use-leaderboard';
 import { useFaculties, useYearLevels, useStudentMe } from '@/hooks/api/use-profile';
 import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
@@ -114,41 +114,28 @@ function TableRowSkeleton() {
 
 const PODIUM_CFG = {
   1: {
-    standH: 'h-24 sm:h-32',
-    standBg: 'bg-gradient-to-b from-amber-400 to-amber-500',
-    numColor: 'text-amber-500',
+    standH: 'h-28 sm:h-36',
+    cap: 'bg-gradient-to-b from-amber-200 to-amber-400',
+    face: 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600',
+    ring: 'ring-amber-600/40',
+    line: 'bg-amber-100/50',
     coinVariant: 'gold' as const,
   },
   2: {
-    standH: 'h-16 sm:h-24',
-    standBg: 'bg-gradient-to-b from-gray-300 to-gray-400 dark:from-gray-500 dark:to-gray-600',
-    numColor: 'text-gray-500 dark:text-gray-300',
+    standH: 'h-20 sm:h-28',
+    cap: 'bg-gradient-to-b from-slate-200 to-slate-400 dark:from-slate-300 dark:to-slate-500',
+    face: 'bg-gradient-to-b from-slate-300 via-slate-400 to-slate-500 dark:from-slate-400 dark:via-slate-500 dark:to-slate-600',
+    ring: 'ring-slate-500/40',
+    line: 'bg-white/45',
     coinVariant: 'silver' as const,
   },
   3: {
-    standH: 'h-12 sm:h-20',
-    standBg: 'bg-gradient-to-b from-orange-400 to-orange-500',
-    numColor: 'text-orange-500',
+    standH: 'h-14 sm:h-24',
+    cap: 'bg-gradient-to-b from-orange-200 to-orange-400',
+    face: 'bg-gradient-to-b from-orange-400 via-orange-500 to-orange-700',
+    ring: 'ring-orange-700/40',
+    line: 'bg-orange-100/50',
     coinVariant: 'bronze' as const,
-  },
-} as const;
-
-// Tableda tied top-3 uchun — medal icon va rang konfiguratsiyasi
-const MEDAL_RANK = {
-  1: {
-    icon: (sz: number) => <Medal size={sz} weight="fill" className="text-amber-500 dark:text-amber-400" />,
-    rankColor: 'text-amber-600 dark:text-amber-400',
-    rowAccent: 'border-l-[3px] border-l-amber-400 dark:border-l-amber-500',
-  },
-  2: {
-    icon: (sz: number) => <Medal size={sz} weight="fill" className="text-slate-400 dark:text-slate-300" />,
-    rankColor: 'text-slate-500 dark:text-slate-300',
-    rowAccent: 'border-l-[3px] border-l-slate-400 dark:border-l-slate-400',
-  },
-  3: {
-    icon: (sz: number) => <Medal size={sz} weight="fill" className="text-orange-500 dark:text-orange-400" />,
-    rankColor: 'text-orange-600 dark:text-orange-400',
-    rowAccent: 'border-l-[3px] border-l-orange-400 dark:border-l-orange-500',
   },
 } as const;
 
@@ -176,11 +163,28 @@ function PodiumCard({ item, position }: { item: LeaderboardItem; position: 1 | 2
         <CoinPill amount={item.total_coins} size="sm" variant={cfg.coinVariant} />
       </div>
 
-      {/* Stand with large position number */}
-      <div className={`mt-2 sm:mt-3 w-full ${cfg.standH} rounded-t-xl ${cfg.standBg} relative overflow-hidden`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-2xl sm:text-4xl lg:text-5xl font-black text-white/70 drop-shadow-sm">{position}</span>
+      {/* 3D podium block: a top cap surface + a beveled front face */}
+      <div className={`mt-2 sm:mt-3 flex w-full flex-col ${cfg.standH}`}>
+        {/* Top surface (the step the winner stands on) */}
+        <div className={`h-2.5 sm:h-3 shrink-0 rounded-t-lg ${cfg.cap} ring-1 ${cfg.ring}`} />
+
+        {/* Front face */}
+        <div className={`relative flex-1 overflow-hidden rounded-b-md ${cfg.face} shadow-lg ring-1 ${cfg.ring}`}>
+          {/* left bevel highlight */}
+          <div className="absolute inset-y-0 left-0 w-2 bg-white/25 sm:w-2.5" />
+          {/* right bevel shadow */}
+          <div className="absolute inset-y-0 right-0 w-2 bg-black/15 sm:w-2.5" />
+          {/* top sheen */}
+          <div className="absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-white/25 to-transparent" />
+          {/* position number flanked by groove lines — the lines run up to the
+              number and continue after it, without ever cutting across it */}
+          <div className="absolute inset-0 flex items-center justify-center gap-2 px-3 sm:gap-3 sm:px-4">
+            <span className={`h-px flex-1 ${cfg.line}`} />
+            <span className="text-3xl font-black text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)] sm:text-5xl lg:text-6xl">
+              {position}
+            </span>
+            <span className={`h-px flex-1 ${cfg.line}`} />
+          </div>
         </div>
       </div>
     </div>
@@ -239,7 +243,8 @@ export default function LeaderboardPage() {
   // Page 2+: Show all 20 in table
   const isPage1 = page === 1;
   const top3 = isPage1 ? results.slice(0, 3) : [];
-  const rest = isPage1 ? results.slice(3) : results;
+  // Table shows ALL results including top-3
+  const rest = results;
 
   // Podium: [2nd, 1st, 3rd] - only on page 1
   const podiumOrder: { item: LeaderboardItem; pos: 1 | 2 | 3 }[] = [];
@@ -378,7 +383,7 @@ export default function LeaderboardPage() {
                   <Trophy size={16} weight="fill" className="text-amber-500" />
                   <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{t('leaderboard.top3')}</p>
                 </div>
-                <div className="flex items-end justify-center gap-1.5 sm:gap-4 lg:gap-6 pb-2 px-4 sm:px-0">
+                <div className="flex items-end justify-center gap-1 sm:gap-1.5 lg:gap-2 pb-2 px-4 sm:px-0">
                   {podiumOrder.map(({ item, pos }, idx) => (
                     <PodiumCard key={item.student_public_id || `p-${idx}`} item={item} position={pos} />
                   ))}
@@ -396,13 +401,13 @@ export default function LeaderboardPage() {
               </div>
 
               <div className="overflow-x-hidden">
-                <table className="w-full">
+                <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b-2 border-border-secondary">
-                      <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-10 sm:w-12">#</th>
-                      <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4">{t('leaderboard.name')}</th>
+                      <th className="text-center text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-1.5 sm:px-4 w-14 sm:w-16">#</th>
+                      <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-1.5 sm:px-4">{t('leaderboard.name')}</th>
                       <th className="text-left text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 hidden md:table-cell">{t('profile.faculty')}</th>
-                      <th className="text-right text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-2 sm:px-4 w-20 sm:w-28">{t('leaderboard.coins')}</th>
+                      <th className="text-right text-[11px] font-bold text-fg-tertiary uppercase tracking-wider py-2.5 px-1.5 sm:px-4 w-28 sm:w-28">{t('leaderboard.coins')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -411,9 +416,13 @@ export default function LeaderboardPage() {
                         const isMe = myId === item.student_public_id;
                         const name = shortName(item.full_name);
                         const initial = name.charAt(0).toUpperCase();
-                        const rank = item.rank ?? (idx + (isPage1 ? 4 : 1));
-                        // Tableda teng o'rinda turgan top-3 uchun medal ko'rsatiladi
-                        const medal = rank <= 3 ? MEDAL_RANK[rank as 1 | 2 | 3] : null;
+                        // Kichik ekranlarda joy tejash uchun ism va familiyani ikki
+                        // qatorga bo'lamiz (ism tepada, familiya pastda).
+                        const [firstName, ...restName] = name.split(' ');
+                        const lastName = restName.join(' ');
+                        const rank = item.rank ?? (idx + (isPage1 ? 1 : (page - 1) * pageSize + idx + 1));
+                        const placeImages: Record<1|2|3, string> = { 1: '/places/1st-place.png', 2: '/places/2nd-place.png', 3: '/places/3rd-place.png' };
+                        const placeImg = rank <= 3 ? placeImages[rank as 1|2|3] : null;
 
                         return (
                           <tr
@@ -421,27 +430,38 @@ export default function LeaderboardPage() {
                             className={[
                               'border-b border-border-secondary last:border-0 transition-colors',
                               isMe ? 'bg-brand-50/60 dark:bg-brand-950/30' : 'hover:bg-bg-primary/50',
-                              medal ? medal.rowAccent : '',
                             ].join(' ')}
                           >
-                            {/* Rank ustuni — medal yoki oddiy raqam */}
-                            <td className="py-3 px-2 sm:px-4">
-                              {medal ? (
-                                <div className="flex items-center gap-1">
-                                  {medal.icon(20)}
-                                  <span className={`text-base font-black tabular-nums leading-none ${medal.rankColor}`}>
-                                    {rank}
-                                  </span>
-                                </div>
+                            {/* Rank ustuni — 1/2/3 uchun place rasm, boshqalar uchun raqam.
+                                Rasm ham raqam ham '#' bilan bir vertikal o'qda (markazda). */}
+                            <td className="py-3 px-1.5 sm:px-4 text-center">
+                              {placeImg ? (
+                                <Image
+                                  src={placeImg}
+                                  alt={`${rank}-o'rin`}
+                                  width={48}
+                                  height={48}
+                                  className="mx-auto block size-9 max-w-none object-contain drop-shadow-sm"
+                                  unoptimized
+                                />
+                              ) : isMe ? (
+                                // Bu — joriy foydalanuvchi qatori: raqamni brand pill + halqa
+                                // bilan belgilaymiz (alohida "mening o'rnim" yozuvi shart emas).
+                                <span
+                                  title={t('leaderboard.myRank')}
+                                  className="inline-flex min-w-[1.35rem] items-center justify-center rounded-full bg-brand-600 px-1 py-0.5 text-[11px] sm:text-xs font-bold tabular-nums text-white shadow-sm ring-2 ring-brand-200 dark:ring-brand-900"
+                                >
+                                  {rank}
+                                </span>
                               ) : (
-                                <span className={`text-xs sm:text-sm font-bold tabular-nums ${isMe ? 'text-brand-600 dark:text-brand-400' : 'text-fg-quaternary'}`}>
+                                <span className="text-xs sm:text-sm font-bold tabular-nums text-fg-quaternary">
                                   {rank}
                                 </span>
                               )}
                             </td>
 
-                            {/* Ism ustuni */}
-                            <td className="py-3 px-2 sm:px-4">
+                            {/* Ism ustuni — ism tepada, familiya pastda (2 qator) */}
+                            <td className="py-3 px-1.5 sm:px-4">
                               <div className="flex items-center gap-2">
                                 <div className="size-7 sm:size-9 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
                                   {item.profile_photo ? (
@@ -450,11 +470,9 @@ export default function LeaderboardPage() {
                                     <div className="size-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-brand-600 dark:text-brand-400">{initial}</div>
                                   )}
                                 </div>
-                                <div className="min-w-0">
-                                  <p className={`text-xs sm:text-sm font-semibold truncate ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-fg-primary'}`}>
-                                    {name}
-                                    {isMe && <span className="text-[10px] text-fg-tertiary ml-1">({t('leaderboard.myRank')})</span>}
-                                  </p>
+                                <div className={`min-w-0 leading-tight ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-fg-primary'}`}>
+                                  <p className="text-xs sm:text-sm font-semibold truncate">{firstName}</p>
+                                  {lastName && <p className="text-xs sm:text-sm font-semibold truncate">{lastName}</p>}
                                 </div>
                               </div>
                             </td>
@@ -462,11 +480,11 @@ export default function LeaderboardPage() {
                             <td className="py-3 px-2 sm:px-4 hidden md:table-cell">
                               <p className="text-xs text-fg-tertiary truncate max-w-[200px]">{item.faculty || '—'}</p>
                             </td>
-                            <td className="py-3 px-2 sm:px-4 text-right">
+                            <td className="py-3 px-1.5 sm:px-4 text-right">
                               <CoinPill
                                 amount={item.total_coins}
                                 size="sm"
-                                variant={medal ? (['gold', 'silver', 'bronze'] as const)[rank - 1] : 'primary'}
+                                variant={placeImg ? (['gold', 'silver', 'bronze'] as const)[rank - 1] : 'primary'}
                               />
                             </td>
                           </tr>

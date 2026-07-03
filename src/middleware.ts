@@ -1,61 +1,58 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const { pathname } = req.nextUrl;
+// Must match the app-scoped cookie name/secret configured in
+// [...nextauth]/route.ts. `withAuth` can't be told a custom cookie name, so we
+// read the token manually with getToken({ cookieName }) — otherwise the
+// middleware looks for the default `next-auth.session-token`, never finds our
+// renamed cookie, thinks the user is logged out, and bounces to /login while
+// the client (which reads the cookie fine) bounces back → ERR_TOO_MANY_REDIRECTS.
+const SECRET = process.env.NEXTAUTH_SECRET;
+const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL || "").startsWith("https://");
+const COOKIE_NAME = `${USE_SECURE_COOKIES ? "__Secure-" : ""}univibe-student.session-token`;
 
-    // Token yo'q bo'lsa, withAuth callback'i allaqachon login'ga yo'naltiradi
-    if (!token) return NextResponse.next();
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-    const studentStatus = token.studentStatus as string | undefined;
-    const role = (token.role as string | undefined)?.toUpperCase();
+  const token = await getToken({
+    req,
+    secret: SECRET,
+    cookieName: COOKIE_NAME,
+    secureCookie: USE_SECURE_COOKIES,
+  });
 
-    // Only gate student accounts
-    if (role !== "STUDENT") return NextResponse.next();
-
-    const onSetupProfile = pathname.startsWith("/setup-profile");
-    const onWaitingRoom = pathname.startsWith("/waiting-room");
-
-    // not_found → must stay ONLY on /setup-profile
-    if (studentStatus === "not_found") {
-      if (!onSetupProfile) {
-        return NextResponse.redirect(new URL("/setup-profile", req.url));
-      }
-    }
-
-    // waited → must stay ONLY on /waiting-room
-    if (studentStatus === "waited") {
-      if (!onWaitingRoom) {
-        return NextResponse.redirect(new URL("/waiting-room", req.url));
-      }
-    }
-
-    // approved or rejected → must NOT be on onboarding screens
-    if (studentStatus === "approved" || studentStatus === "rejected") {
-      if (onSetupProfile || onWaitingRoom) {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
-    }
-
-    return NextResponse.next();
-  },
-  {
-    secret: process.env.NEXTAUTH_SECRET,
-    pages: {
-      signIn: "/login",
-    },
-    callbacks: {
-      // Unauthenticated or expired refresh token → redirect to signIn page
-      authorized: ({ token }) => {
-        if (!token) return false;
-        if (token.error === "RefreshAccessTokenError") return false;
-        return true;
-      },
-    },
+  // Not authenticated, or the refresh token is dead → send to login.
+  if (!token || token.error === "RefreshAccessTokenError") {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
-);
+
+  const studentStatus = token.studentStatus as string | undefined;
+  const role = (token.role as string | undefined)?.toUpperCase();
+
+  // Only students are gated by the onboarding flow.
+  if (role !== "STUDENT") return NextResponse.next();
+
+  const onSetupProfile = pathname.startsWith("/setup-profile");
+  const onWaitingRoom = pathname.startsWith("/waiting-room");
+  const onOnboarding = onSetupProfile || onWaitingRoom;
+
+  // ── Status-driven routing ──────────────────────────────────────────────
+  // approved / rejected → full app; never on the onboarding screens.
+  if (studentStatus === "approved" || studentStatus === "rejected") {
+    if (onOnboarding) return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.next();
+  }
+
+  // waited → profile submitted, pending review → ONLY the waiting room.
+  if (studentStatus === "waited") {
+    if (!onWaitingRoom) return NextResponse.redirect(new URL("/waiting-room", req.url));
+    return NextResponse.next();
+  }
+
+  // not_found / empty / anything else → profile not created yet → setup.
+  if (!onSetupProfile) return NextResponse.redirect(new URL("/setup-profile", req.url));
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

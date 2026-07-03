@@ -1,381 +1,248 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import {
-  Calendar,
-  MapPin,
-  Users,
-  Clock,
-  User,
-  Coins,
-  Award,
-  ArrowLeft,
-  CheckCircle,
-  XCircle,
-} from 'lucide-react';
-import { getEvent, getSimilarEvents, registerForEvent, cancelRegistration } from '@/lib/api/student';
-import { type Event } from '@/types/student';
-import { Button } from '@/components/ui/Button';
-import { StatusBadge, CategoryBadge } from '@/components/ui/Badge';
-import { PremiumConfirmModal, SuccessModal } from '@/components/ui/Modal';
-import { EventCard } from '@/components/student/EventCard';
-import { CoinPill } from '@/components/student/CoinPill';
-import { Skeleton } from '@/components/ui/Skeleton';
+import Image from 'next/image';
 import { toast } from 'sonner';
-import { SectionHeader, SectionTitle } from '@/components/student/SectionHeader';
-import { IconWrapper } from '@/components/ui/IconWrapper';
+import {
+  ArrowLeftIcon, CalendarDotsIcon, ClockIcon, MapPinIcon, UsersThreeIcon,
+  BuildingsIcon, CheckCircleIcon, QrCodeIcon,
+} from '@phosphor-icons/react';
+import {
+  useEvent, useRegisterEvent, useCancelEventRegistration, useConfirmAttendance,
+} from '@/hooks/api/use-events';
+import { QrScannerModal } from '@/components/student/QrScannerModal';
+import { CoinPill } from '@/components/student/CoinPill';
+import { Spinner } from '@/components/ui/spinner';
+import { useTranslation } from '@/lib/i18n/i18n';
+import { toHttps } from '@/utils/cx';
+import { playCelebration } from '@/utils/celebration';
+import { eventWhen } from '@/utils/date';
 
 export default function EventDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const eventId = params.id as string;
+  const id = params.id as string;
+  const { t, locale } = useTranslation();
 
-  const [event, setEvent] = useState<Event | null>(null);
-  const [similarEvents, setSimilarEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const { data: event, isPending } = useEvent(id);
+  const { mutate: register, isPending: isRegistering } = useRegisterEvent();
+  const { mutate: cancel, isPending: isCancelling } = useCancelEventRegistration();
+  const { mutate: confirmAttendance, isPending: isConfirming } = useConfirmAttendance();
 
-  useEffect(() => {
-    loadEvent();
-  }, [eventId]);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
 
-  const loadEvent = async () => {
-    setLoading(true);
-    try {
-      const eventData = await getEvent(eventId);
-      if (eventData) {
-        setEvent(eventData);
-        const similar = await getSimilarEvents(eventId, eventData.category);
-        setSimilarEvents(similar);
-      }
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
+  const registrationClosed = event?.registration_end ? new Date(event.registration_end) < new Date() : false;
+  const isFull = event?.participant_limit != null && event.registered_count >= event.participant_limit;
+  const attended = event?.registration_status === 'ATTENDED';
+
+  const handleRegister = () => register(id, {
+    onSuccess: () => toast.success(t('events.registerSuccess')),
+    onError: (e: any) => toast.error(e?.response?.data?.detail || t('common.error')),
+  });
+  const handleCancel = () => cancel(id, {
+    onSuccess: () => toast.success(t('events.cancelSuccess')),
+    onError: (e: any) => toast.error(e?.response?.data?.detail || t('common.error')),
+  });
+  const handleScanned = (token: string) => { setScannerOpen(false); setPendingToken(token); };
+  const handleConfirmAttendance = () => {
+    if (!pendingToken) return;
+    confirmAttendance({ id, token: pendingToken }, {
+      onSuccess: (data) => {
+        setPendingToken(null);
+        playCelebration();
+        // coins_awarded is a boolean flag; the actual amount is the event reward.
+        const reward = event?.coin_reward ?? 0;
+        toast.success(t('events.attendanceConfirmed'), {
+          description: data?.coins_awarded && reward > 0 ? `+${reward} ${t('events.coins') || 'coin'}` : undefined,
+        });
+      },
+      onError: (e: any) => {
+        setPendingToken(null);
+        toast.error(e?.response?.data?.error || e?.response?.data?.detail || t('common.error'));
+      },
+    });
   };
 
-  const handleRegister = async () => {
-    if (!event) return;
-    setIsRegistering(true);
-    try {
-      const result = await registerForEvent(event.id);
-      if (result.success) {
-        setEvent({ ...event, status: 'registered', registeredCount: event.registeredCount + 1 });
-        setShowConfirmModal(false);
-        setShowSuccessModal(true);
-        toast.success('Successfully registered for event!');
-      } else {
-        toast.error(result.error || 'Failed to register');
-      }
-    } catch (error) {
-      toast.error('Something went wrong');
-    } finally {
-      setIsRegistering(false);
-    }
-  };
-
-  const handleCancelRegistration = async () => {
-    if (!event) return;
-    setIsRegistering(true);
-    try {
-      const result = await cancelRegistration(event.id);
-      if (result.success) {
-        setEvent({ ...event, status: 'open', registeredCount: event.registeredCount - 1 });
-        setShowCancelModal(false);
-        toast.success('Registration cancelled');
-      } else {
-        toast.error(result.error || 'Failed to cancel');
-      }
-    } catch (error) {
-      toast.error('Something went wrong');
-    } finally {
-      setIsRegistering(false);
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
-  };
-
-  const formatDeadline = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
-  };
-
-  if (loading) {
-    return <EventDetailsSkeleton />;
-  }
-
-  if (!event) {
+  if (isPending) {
     return (
-      <div className="text-center py-16">
-        <h2 className="text-xl font-semibold text-fg-primary mb-2">Event not found</h2>
-        <p className="text-fg-secondary mb-6">The event you're looking for doesn't exist.</p>
-        <Button onClick={() => router.push('/events')}>
-          Back to Events
-        </Button>
+      <div className="space-y-4 pb-10">
+        <div className="h-8 w-24 rounded-lg skeleton-shimmer" />
+        <div className="aspect-[16/9] rounded-2xl skeleton-shimmer" />
+        <div className="h-7 w-2/3 rounded-lg skeleton-shimmer" />
+        <div className="h-40 rounded-2xl skeleton-shimmer" />
       </div>
     );
   }
 
-  const spotsLeft = event.capacity - event.registeredCount;
-  const isFull = spotsLeft <= 0;
-  const isRegistered = event.status === 'registered';
-  const isClosed = event.status === 'closed';
+  if (!event) {
+    return (
+      <div className="rounded-2xl bg-bg-secondary shadow-sm py-16 text-center">
+        <CalendarDotsIcon size={48} weight="light" className="mx-auto mb-4 text-fg-quaternary" />
+        <p className="text-sm text-fg-tertiary">{t('events.emptyTitle') || 'Tadbir topilmadi'}</p>
+        <button onClick={() => router.push('/events')} className="mt-4 text-sm font-semibold text-brand-600 hover:underline">
+          {t('events.backToEvents') || 'Tadbirlarga qaytish'}
+        </button>
+      </div>
+    );
+  }
+
+  const organizer = event.organizer_club_name || event.organizer_staff_name;
+  const banner = toHttps(event.banner);
+  const fillPct = event.participant_limit ? Math.min(100, Math.round((event.registered_count / event.participant_limit) * 100)) : 0;
 
   return (
-    <div className="space-y-8">
-      {/* Back Button */}
-      <Link
-        href="/events"
-        className="
-          inline-flex items-center gap-2 text-sm text-fg-secondary
-          hover:text-fg-primary transition-colors
-          focus-visible:ring-4 focus-visible:ring-brand-100 dark:focus-visible:ring-brand-900 rounded
-        "
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Events
-      </Link>
+    <div className="space-y-5 pb-10">
+      {/* Back */}
+      <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-sm font-medium text-fg-tertiary transition-colors hover:text-fg-primary">
+        <ArrowLeftIcon size={16} /> {t('events.backToEvents') || 'Orqaga'}
+      </button>
 
-      {/* Hero Section */}
-      <div className="relative rounded-2xl overflow-hidden">
-        {event.coverImage ? (
-          <img
-            src={event.coverImage}
-            alt={event.title}
-            className="w-full h-48 sm:h-64 lg:h-80 object-cover"
-          />
+      {/* Hero banner */}
+      <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-bg-tertiary shadow-sm sm:aspect-[21/9]">
+        {banner ? (
+          <Image src={banner} alt={event.title} fill className="object-cover" unoptimized priority />
         ) : (
-          <div className="w-full h-48 sm:h-64 lg:h-80 bg-gradient-to-br from-brand-400 to-brand-600" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <StatusBadge status={event.status} />
-            <CategoryBadge category={event.category} />
+          <div className="flex size-full items-center justify-center bg-gradient-to-br from-bg-tertiary via-bg-tertiary to-brand-500/15">
+            <Image src="/svgs/event.svg" alt="" width={320} height={220} className="h-auto w-1/3 max-w-[240px] object-contain opacity-95" unoptimized priority />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            {event.title}
-          </h1>
-        </div>
+        )}
+        {attended ? (
+          <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-success-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md">
+            <CheckCircleIcon size={14} weight="fill" /> {t('events.attended') || 'Qatnashdingiz'}
+          </div>
+        ) : event.is_registered ? (
+          <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md">
+            <CheckCircleIcon size={14} weight="fill" /> {t('events.registered')}
+          </div>
+        ) : null}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Description */}
-          <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6">
-            <SectionTitle title="About This Event" iconName="info" />
-            <p className="text-fg-secondary leading-relaxed">{event.description}</p>
+      {/* Title */}
+      <h1 className="text-xl font-bold leading-tight text-fg-primary sm:text-2xl">{event.title}</h1>
 
-            <div className="flex flex-wrap gap-2 mt-4">
-              {event.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 text-sm rounded-full bg-bg-tertiary text-fg-secondary"
-                >
-                  {tag}
+      {/* Content grid — action card first on mobile, right/sticky on desktop */}
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[1fr_340px] lg:items-start">
+        {/* ── Action / info card ── */}
+        <aside className="order-1 lg:order-2 lg:sticky lg:top-6">
+          <div className="rounded-2xl bg-bg-secondary p-5 shadow-sm">
+            {/* Reward */}
+            {event.coin_reward > 0 && (
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-fg-quaternary">{t('events.reward')}</p>
+                  <p className="text-sm text-fg-tertiary">{t('events.rewardDesc') || 'Qatnashganingiz uchun'}</p>
+                </div>
+                <CoinPill amount={event.coin_reward} size="md" variant="gold" />
+              </div>
+            )}
+
+            {/* Meta */}
+            <div className="space-y-3">
+              <MetaRow icon={ClockIcon} label={t('events.when')} value={eventWhen(event.start_time, locale)} />
+              {event.location && <MetaRow icon={MapPinIcon} label={t('events.location')} value={event.location} />}
+              {organizer && <MetaRow icon={BuildingsIcon} label={t('events.organizer')} value={organizer} />}
+            </div>
+
+            {/* Participants */}
+            <div className="mt-4">
+              <div className="mb-1.5 flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-fg-tertiary"><UsersThreeIcon size={14} /> {t('events.participants')}</span>
+                <span className="font-semibold text-fg-primary">
+                  {event.registered_count}{event.participant_limit ? ` / ${event.participant_limit}` : ''}
                 </span>
-              ))}
+              </div>
+              {event.participant_limit ? (
+                <div className="h-1.5 overflow-hidden rounded-full bg-bg-tertiary">
+                  <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${fillPct}%` }} />
+                </div>
+              ) : null}
+            </div>
+
+            {/* Actions */}
+            <div className="mt-5">
+              {attended ? (
+                <div className="flex w-full items-center justify-center gap-2 py-2.5 text-sm font-semibold text-success-600 dark:text-success-400">
+                  <CheckCircleIcon size={18} weight="fill" /> {t('events.attended') || 'Qatnashdingiz'}
+                </div>
+              ) : event.is_registered ? (
+                <div className="space-y-2.5">
+                  <button onClick={() => setScannerOpen(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700">
+                    <QrCodeIcon size={18} weight="fill" /> {t('events.confirmAttendance') || 'Davomatni tasdiqlash'}
+                  </button>
+                  <button onClick={handleCancel} disabled={isCancelling} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-bg-tertiary px-6 py-2.5 text-sm font-semibold text-fg-secondary transition-colors hover:bg-bg-primary disabled:opacity-60">
+                    {isCancelling ? <Spinner className="size-5" /> : t('events.cancelRegistration')}
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleRegister} disabled={isRegistering || registrationClosed || isFull} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60">
+                  {isRegistering ? <Spinner className="size-5" /> : isFull ? t('events.full') : registrationClosed ? (t('events.registrationClosed') || t('events.full')) : t('events.register')}
+                </button>
+              )}
             </div>
           </div>
+        </aside>
 
-          {/* Rewards Section */}
-          {(event.coinReward > 0 || event.badgeReward) && (
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
-              <SectionTitle title="Rewards for Attendance" iconName="star" />
-              <div className="flex flex-wrap gap-4">
-                {event.coinReward > 0 && (
-                  <div className="flex items-center gap-3 bg-white dark:bg-black/20 rounded-lg px-4 py-3">
-                    <Coins className="w-8 h-8 text-amber-500" />
-                    <div>
-                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                        +{event.coinReward}
-                      </p>
-                      <p className="text-sm text-fg-tertiary">coins</p>
-                    </div>
-                  </div>
-                )}
-                {event.badgeReward && (
-                  <div className="flex items-center gap-3 bg-white dark:bg-black/20 rounded-lg px-4 py-3">
-                    <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center">
-                      🏆
-                    </div>
-                    <div>
-                      <p className="font-semibold text-fg-primary">{event.badgeReward}</p>
-                      <p className="text-sm text-fg-tertiary">badge</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+        {/* ── About ── */}
+        <div className="order-2 lg:order-1">
+          {event.description ? (
+            <div className="rounded-2xl bg-bg-secondary p-5 shadow-sm">
+              <h2 className="mb-2.5 text-sm font-bold text-fg-primary">{t('events.about')}</h2>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-fg-secondary">{event.description}</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-bg-secondary p-8 text-center text-sm text-fg-tertiary shadow-sm">
+              {t('events.noDescription') || "Tadbir haqida qo'shimcha ma'lumot yo'q."}
             </div>
           )}
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Event Details Card */}
-          <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <IconWrapper iconName="calendar" size="md" />
-              <div>
-                <p className="text-sm text-fg-tertiary">Date</p>
-                <p className="font-medium text-fg-primary">{formatDate(event.date)}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <IconWrapper iconName="clock" size="md" />
-              <div>
-                <p className="text-sm text-fg-tertiary">Time</p>
-                <p className="font-medium text-fg-primary">
-                  {event.startTime} - {event.endTime}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <IconWrapper iconName="map-pin" size="md" />
-              <div>
-                <p className="text-sm text-fg-tertiary">Location</p>
-                <p className="font-medium text-fg-primary">{event.location}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <IconWrapper iconName="user" size="md" />
-              <div>
-                <p className="text-sm text-fg-tertiary">Organizer</p>
-                <p className="font-medium text-fg-primary">{event.organizer}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <IconWrapper iconName="users" size="md" />
-              <div>
-                <p className="text-sm text-fg-tertiary">Capacity</p>
-                <p className={`font-medium ${isFull ? 'text-error-600 dark:text-error-400' : 'text-fg-primary'}`}>
-                  {event.registeredCount} / {event.capacity} registered
-                  {!isFull && ` (${spotsLeft} spots left)`}
-                </p>
-              </div>
-            </div>
-
-            {/* Registration Deadline */}
-            <div className="pt-4 border-t border-border-secondary">
-              <p className="text-sm text-fg-tertiary mb-1">Registration Deadline</p>
-              <p className="font-medium text-fg-primary">
-                {formatDeadline(event.registrationDeadline)}
-              </p>
-            </div>
-          </div>
-
-          {/* CTA Card */}
-          <div className="bg-bg-secondary rounded-xl border border-border-secondary shadow-sm p-6">
-            {isRegistered ? (
-              <>
-                <div className="flex items-center gap-2 text-success-600 dark:text-success-400 mb-4">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="font-medium">You're registered!</span>
-                </div>
-                <Button
-                  variant="danger"
-                  fullWidth
-                  onClick={() => setShowCancelModal(true)}
-                >
-                  Cancel Registration
-                </Button>
-              </>
-            ) : isClosed || isFull ? (
-              <>
-                <div className="flex items-center gap-2 text-fg-tertiary mb-4">
-                  <XCircle className="w-5 h-5" />
-                  <span className="font-medium">
-                    {isFull ? 'Event is full' : 'Registration closed'}
-                  </span>
-                </div>
-                <Button variant="secondary" fullWidth disabled>
-                  Registration Unavailable
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => setShowConfirmModal(true)}
-              >
-                Register for Event
-              </Button>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* Similar Events */}
-      {similarEvents.length > 0 && (
-        <section>
-          <SectionHeader title="Similar Events" iconName="calendar" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {similarEvents.map((e) => (
-              <EventCard key={e.id} event={e} />
-            ))}
+      {/* QR scanner */}
+      <QrScannerModal isOpen={scannerOpen} onScan={handleScanned} onClose={() => setScannerOpen(false)} />
+
+      {/* Confirm-attendance dialog */}
+      {pendingToken && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-bg-secondary p-6 text-center shadow-xl">
+            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-brand-50 ring-8 ring-brand-50/50 dark:bg-brand-500/10 dark:ring-brand-500/10">
+              <QrCodeIcon size={26} weight="fill" className="text-brand-600" />
+            </div>
+            <h3 className="text-base font-bold text-fg-primary">{t('events.confirmAttendanceTitle') || 'Davomatni tasdiqlaysizmi?'}</h3>
+            <p className="mt-1.5 text-sm text-fg-tertiary">
+              <span className="font-semibold text-fg-secondary">{event.title}</span> {t('events.confirmAttendanceDesc') || 'tadbiri uchun davomatingiz belgilanadi.'}
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setPendingToken(null)} disabled={isConfirming} className="flex-1 rounded-xl bg-bg-tertiary px-4 py-2.5 text-sm font-semibold text-fg-primary transition-colors hover:bg-bg-primary disabled:opacity-60">
+                {t('common.cancel')}
+              </button>
+              <button onClick={handleConfirmAttendance} disabled={isConfirming} className="inline-flex flex-1 items-center justify-center rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60">
+                {isConfirming ? <Spinner className="size-5" /> : t('common.confirm')}
+              </button>
+            </div>
           </div>
-        </section>
+        </div>
       )}
-
-      {/* Confirm Registration Modal */}
-      <PremiumConfirmModal
-        isOpen={showConfirmModal}
-        onOpenChange={setShowConfirmModal}
-        title="Register for Event"
-        description={`Are you sure you want to register for "${event.title}"? You'll earn ${event.coinReward} coins after attending.`}
-        confirmText="Register"
-        onConfirm={handleRegister}
-        isLoading={isRegistering}
-        icon={<Calendar className="w-6 h-6" />}
-      />
-
-      {/* Cancel Registration Modal */}
-      <PremiumConfirmModal
-        isOpen={showCancelModal}
-        onOpenChange={setShowCancelModal}
-        title="Cancel Registration"
-        description={`Are you sure you want to cancel your registration for "${event.title}"?`}
-        confirmText="Cancel Registration"
-        cancelText="Keep Registration"
-        variant="danger"
-        onConfirm={handleCancelRegistration}
-        isLoading={isRegistering}
-        icon={<XCircle className="w-6 h-6" />}
-      />
-
-      {/* Success Modal */}
-      <SuccessModal
-        isOpen={showSuccessModal}
-        onOpenChange={setShowSuccessModal}
-        title="Registration Successful!"
-        description={`You're registered for "${event.title}". Don't forget to attend and earn your coins!`}
-        icon={<CheckCircle className="w-6 h-6" />}
-      />
     </div>
   );
 }
 
-function EventDetailsSkeleton() {
+function MetaRow({
+  icon: Icon, label, value,
+}: {
+  icon: React.ComponentType<{ size?: number; weight?: 'regular' | 'fill'; className?: string }>;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="space-y-8">
-      <Skeleton className="h-6 w-32" />
-      <Skeleton className="h-64 w-full rounded-2xl" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <Skeleton className="h-48 w-full rounded-xl" />
-        </div>
-        <div>
-          <Skeleton className="h-64 w-full rounded-xl" />
-        </div>
+    <div className="flex items-center gap-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-bg-tertiary text-brand-600">
+        <Icon size={16} weight="fill" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11px] uppercase tracking-wide text-fg-quaternary">{label}</p>
+        <p className="truncate text-sm font-medium text-fg-primary">{value}</p>
       </div>
     </div>
   );

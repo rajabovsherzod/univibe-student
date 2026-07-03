@@ -6,7 +6,9 @@ const BACKEND = (process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz").r
 const ROOT_DOMAIN = new URL(BACKEND).hostname.split(".").slice(-2).join(".");
 
 // Allow the backend host itself + any subdomain (minio.univibe.uz, cdn.univibe.uz, etc.)
+// Also allow localhost and 127.0.0.1 for local development
 function isAllowed(hostname: string): boolean {
+  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
   return hostname === ROOT_DOMAIN || hostname.endsWith(`.${ROOT_DOMAIN}`);
 }
 
@@ -24,7 +26,7 @@ export async function GET(req: NextRequest) {
       if (!isAllowed(parsed.hostname)) {
         return new NextResponse(`Forbidden: ${parsed.hostname}`, { status: 403 });
       }
-      parsed.protocol = "https:";
+      // Keep original protocol — don't force https (breaks local http:// backend URLs)
       target = parsed.toString();
     } catch {
       return new NextResponse("Invalid url", { status: 400 });

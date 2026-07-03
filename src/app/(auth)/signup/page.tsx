@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
@@ -15,8 +14,7 @@ import { Input } from "@/components/base/input/input";
 import { Button } from "@/components/base/buttons/button";
 import { Select } from "@/components/base/select/select";
 import { PinInput } from "@/components/base/pin-input/pin-input";
-import { ThemeToggle } from "@/components/base/theme-toggle/theme-toggle";
-import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { useTranslation } from "@/lib/i18n/i18n";
 
 import { useSendOTP, useVerifyOTP } from "@/hooks/api/use-auth";
@@ -26,16 +24,40 @@ import { SignupFormSchema, OtpSchema } from "./schema";
 import type { SignupFormType, OtpType } from "./schema";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function extractApiError(e: any): string {
-  if (!e?.response) return "Server bilan ulanib bo'lmadi. Internetni tekshiring.";
-  const data = e.response.data;
-  if (!data) return `Server xatosi (${e.response.status})`;
-  if (typeof data === "string") return data;
-  if (data.detail) return String(data.detail);
-  if (data.message) return String(data.message);
-  const fieldMsgs = Object.values(data).flat().filter((v) => typeof v === "string") as string[];
-  if (fieldMsgs.length > 0) return fieldMsgs[0];
-  return `Xatolik yuz berdi (${e.response.status})`;
+/**
+ * Turns a backend/network error into a message in the *active* language.
+ * Known cases (invalid/expired OTP, account exists, bad credentials) are mapped
+ * to localized i18n keys; anything unknown falls back to the backend's own text.
+ */
+function localizeApiError(e: any, t: (k: string) => string): string {
+  if (!e?.response) return t("auth.errServer");
+  const { data, status } = e.response;
+  const code: string | undefined = data?.error_code;
+  const raw =
+    typeof data === "string"
+      ? data
+      : data?.error || data?.detail || data?.message || "";
+  const text = String(raw).toLowerCase();
+
+  if (code === "ACCOUNT_ALREADY_EXISTS" || text.includes("already")) return t("auth.errAccountExists");
+  if (text.includes("expired")) return t("auth.errOtpExpired");
+  if (text.includes("invalid otp") || text.includes("invalid code")) return t("auth.errOtpInvalid");
+  if (status === 401) return t("auth.errInvalidCredentials");
+
+  // Unknown but with a server-provided message → surface it verbatim.
+  if (raw) return String(raw);
+  if (data && typeof data === "object") {
+    const fieldMsgs = Object.values(data).flat().filter((v) => typeof v === "string") as string[];
+    if (fieldMsgs.length > 0) return fieldMsgs[0];
+  }
+  return t("auth.errGeneric");
+}
+
+/** Drop keyboard focus so no input keeps its focus ring during a step transition. */
+function blurActive() {
+  if (typeof document !== "undefined") {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+  }
 }
 
 type OtpStatus = "idle" | "error" | "success";
@@ -59,11 +81,15 @@ export default function SignupPage() {
   const signupForm = useForm<SignupFormType>({
     resolver: zodResolver(SignupFormSchema),
     defaultValues: { name: "", surname: "", university: "", email: "", password: "", confirmPassword: "" },
+    // Don't programmatically focus the first invalid field on submit — that focus
+    // ring flashing across the inputs on button click is exactly what we don't want.
+    shouldFocusError: false,
   });
 
   const otpForm = useForm<OtpType>({
     resolver: zodResolver(OtpSchema),
     defaultValues: { code: "" },
+    shouldFocusError: false,
   });
 
   // ── Session storage persistence
@@ -96,6 +122,7 @@ export default function SignupPage() {
 
   // ── Step 1: Submit form → send OTP
   const onFormSubmit = async (data: SignupFormType) => {
+    blurActive();
     saveToSession(data);
     sessionStorage.setItem("signupPassword", data.password);
     try {
@@ -104,7 +131,7 @@ export default function SignupPage() {
       setStep(2);
       setCountdown(120);
     } catch (e: any) {
-      toast.error(t("common.error"), { description: extractApiError(e) });
+      toast.error(t("common.error"), { description: localizeApiError(e, t) });
     }
   };
 
@@ -126,11 +153,14 @@ export default function SignupPage() {
       setSavedPassword(password);
       sessionStorage.removeItem("signupData");
       sessionStorage.removeItem("signupPassword");
+      blurActive();
       await new Promise((r) => setTimeout(r, 400));
       setStep3(true);
     } catch (e: any) {
       setOtpStatus("error");
-      toast.error(t("common.error"), { description: extractApiError(e) });
+      const msg = localizeApiError(e, t);
+      otpForm.setError("code", { message: msg });
+      toast.error(t("common.error"), { description: msg });
     }
   };
 
@@ -145,7 +175,7 @@ export default function SignupPage() {
         body: JSON.stringify({ email, password: savedPassword }),
         headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) throw new Error("Login xatosi yuz berdi");
+      if (!res.ok) throw new Error(t("auth.errLoginFailed"));
       const data = await res.json();
       const { student_status, access_token, refresh_token, full_name, role, university_id } = data;
       if (student_status) {
@@ -164,7 +194,7 @@ export default function SignupPage() {
       // Middleware will redirect to the correct page based on student_status in the JWT
       router.push("/");
     } catch (e: any) {
-      toast.error("Tizimga kirish xatosi", { description: e.message || "Qayta urinib ko'ring" });
+      toast.error(t("common.error"), { description: e.message || t("auth.errLoginFailed") });
       setIsLoggingIn(false);
     }
   };
@@ -180,44 +210,29 @@ export default function SignupPage() {
       otpForm.reset();
       toast.success(t("auth.codeSent"));
     } catch (e: any) {
-      toast.error(t("common.error"), { description: extractApiError(e) });
+      toast.error(t("common.error"), { description: localizeApiError(e, t) });
     }
   };
 
   const universityItems = (universities || []).map((u) => ({ id: u.public_id, label: u.name }));
 
+  const isOtpStep = step === 2 && !step3;
+  const heading = step3 ? t("auth.signupDoneTitle") : t("auth.signup");
+  const subheading = step3
+    ? t("auth.signupDoneSubtitle")
+    : step === 1
+      ? t("auth.signupSubtitle")
+      : `${signupForm.getValues("email")} ${t("auth.otpSent")}`;
+
   return (
-    <div className="relative min-h-screen bg-bg-primary flex items-center justify-center px-4 py-8 overflow-hidden">
-
-      {/* Watermark */}
-      <div className="pointer-events-none select-none absolute inset-0 flex items-center justify-center" aria-hidden>
-        <Image src="/icon.svg" alt="" width={480} height={480} className="opacity-[0.035] dark:opacity-[0.05]" priority />
-      </div>
-
-      {/* Top bar */}
-      <div className="absolute top-5 right-5 z-20 flex items-center gap-2">
-        <LanguageSwitcher />
-        <ThemeToggle />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-[560px]">
-
-        {/* Header */}
-        <div className="flex flex-col items-center gap-3 mb-6">
-          <Link href="/" className="flex items-center justify-center rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-            <Image src="/icon.svg" alt="Univibe" width={56} height={56} priority />
-          </Link>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-primary">{t("auth.signup")}</h1>
-            <p className="mt-1 text-sm text-tertiary">
-              {step3
-                ? "Email manzilingiz muvaffaqiyatli tasdiqlandi"
-                : step === 1 ? t("auth.signupSubtitle") : `${signupForm.getValues("email")} ${t("auth.otpSent")}`}
-            </p>
-          </div>
-        </div>
-
+    <AuthShell
+      illustration={isOtpStep ? "/svgs/otp.svg" : "/svgs/sign-up.svg"}
+      illustrationTitle={isOtpStep ? t("auth.otpIllustrationTitle") : t("auth.signupIllustrationTitle")}
+      illustrationSubtitle={isOtpStep ? t("auth.otpIllustrationSubtitle") : t("auth.signupIllustrationSubtitle")}
+      heading={heading}
+      subheading={subheading}
+      contentMaxWidth="560px"
+    >
         {/* Progress */}
         {!step3 && (
           <div className="mb-5">
@@ -232,21 +247,28 @@ export default function SignupPage() {
           </div>
         )}
 
-        {/* Card */}
-        <div className="rounded-2xl bg-bg-secondary border border-border-secondary shadow-sm p-7">
-          <AnimatePresence mode="wait">
+        {/* Card — `layout` resizes the height smoothly between steps. Children use
+            `layout="position"` (NOT full layout) so the inputs never get scale-distorted
+            — that distortion is what made a stray "focus border" flash on the inputs. */}
+        <motion.div
+          layout
+          transition={{ layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
+          style={{ borderRadius: 16 }}
+          className="overflow-hidden bg-bg-secondary border border-border-secondary shadow-sm p-5 sm:p-7"
+        >
+          <AnimatePresence mode="popLayout" initial={false}>
 
             {/* ── STEP 3: Success ── */}
             {step3 && (
-              <motion.div key="step3" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.25 }}>
+              <motion.div key="step3" layout="position" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25, ease: "easeOut" }}>
                 <div className="flex flex-col items-center gap-5 py-4">
                   <div className="flex size-16 items-center justify-center rounded-full bg-success-50 dark:bg-success-500/10 border-[6px] border-success-100 dark:border-success-500/20">
                     <CheckCircle className="size-8 text-success-600 dark:text-success-400" />
                   </div>
                   <div className="text-center">
-                    <h2 className="text-lg font-bold text-primary mb-1">Email tasdiqlandi!</h2>
+                    <h2 className="text-lg font-bold text-primary mb-1">{t("auth.otpSuccessTitle")}</h2>
                     <p className="text-sm text-tertiary max-w-xs">
-                      Hisobingiz muvaffaqiyatli yaratildi. Tizimga kirish uchun quyidagi tugmani bosing.
+                      {t("auth.otpSuccessDesc")}
                     </p>
                   </div>
                   <Button
@@ -257,7 +279,7 @@ export default function SignupPage() {
                     isDisabled={isLoggingIn}
                     onClick={handleLoginAfterSignup}
                   >
-                    Tizimga kirish
+                    {t("auth.otpSuccessButton")}
                   </Button>
                 </div>
               </motion.div>
@@ -265,7 +287,7 @@ export default function SignupPage() {
 
             {/* ── STEP 1 ── */}
             {step === 1 && !step3 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+              <motion.div key="step1" layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22, ease: "easeOut" }}>
                 <form onSubmit={signupForm.handleSubmit(onFormSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-1">
                     <Controller name="name" control={signupForm.control} render={({ field }) => (
@@ -310,7 +332,7 @@ export default function SignupPage() {
 
             {/* ── STEP 2: OTP ── */}
             {step === 2 && !step3 && (
-              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+              <motion.div key="step2" layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22, ease: "easeOut" }}>
                 <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="flex flex-col items-center gap-5">
                   <div className="flex size-14 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-500/10 border-[6px] border-brand-100 dark:border-brand-500/20">
                     <Mail01 className="size-6 text-brand-600 dark:text-brand-400" />
@@ -343,7 +365,7 @@ export default function SignupPage() {
                       </button>
                     )}
                   </div>
-                  <button type="button" onClick={() => { setStep(1); setOtpStatus("idle"); otpForm.reset(); }} className="inline-flex items-center gap-1.5 text-sm font-medium text-tertiary hover:text-secondary transition-colors">
+                  <button type="button" onClick={() => { blurActive(); setStep(1); setOtpStatus("idle"); otpForm.reset(); }} className="inline-flex items-center gap-1.5 text-sm font-medium text-tertiary hover:text-secondary transition-colors">
                     <ArrowLeft className="size-4" />
                     {t("auth.otpBack")}
                   </button>
@@ -352,7 +374,7 @@ export default function SignupPage() {
             )}
 
           </AnimatePresence>
-        </div>
+        </motion.div>
 
         {/* Footer */}
         {step === 1 && !step3 && (
@@ -361,7 +383,6 @@ export default function SignupPage() {
             <Link href="/login" className="font-semibold text-brand-solid hover:text-brand-700 hover:underline transition-colors">{t("auth.loginLink")}</Link>
           </p>
         )}
-      </div>
-    </div>
+    </AuthShell>
   );
 }

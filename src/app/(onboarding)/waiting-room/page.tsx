@@ -2,15 +2,16 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { parseDate } from "@internationalized/date";
-import { getLogoutUrl } from "@/lib/get-app-url";
+import { performLogout } from "@/lib/logout";
+import { Spinner } from "@/components/ui/spinner";
 import {
   UserIcon, PhoneIcon, CalendarBlankIcon, GraduationCapIcon,
   BuildingsIcon, PencilSimpleIcon, ClockIcon, SignOutIcon, CameraIcon,
-  IdentificationCardIcon, LockIcon,
+  IdentificationCardIcon, LockIcon, EnvelopeSimpleIcon,
 } from "@phosphor-icons/react";
 import type { ComponentType } from "react";
 import Image from "next/image";
@@ -204,7 +205,7 @@ export default function WaitingRoomPage() {
 
   const handleSignOut = () => {
     try { localStorage.clear(); sessionStorage.clear(); } catch { }
-    signOut({ callbackUrl: getLogoutUrl() });
+    performLogout();
   };
 
   const displayName = profile?.full_name?.replace(/\bUser\b/gi, "").trim() || session?.user?.name || "Talaba";
@@ -214,105 +215,117 @@ export default function WaitingRoomPage() {
   return (
     <div className="space-y-4 pb-10">
 
-      {/* ── Status banner ── */}
-      <div className="flex items-center gap-3.5 rounded-2xl border border-border-secondary bg-bg-secondary shadow-xs px-4 py-3.5">
-        <div className="size-9 rounded-xl bg-brand-50 dark:bg-brand-500/10 ring-1 ring-brand-200/60 dark:ring-brand-500/25 flex items-center justify-center shrink-0">
-          <ClockIcon size={17} weight="fill" className="text-brand-600 dark:text-brand-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-fg-primary">
-            {t("waiting.title")}
-          </p>
-          <p className="text-xs text-fg-tertiary leading-relaxed mt-0.5">
-            {t("waiting.description")}
-          </p>
-        </div>
-        <div className="shrink-0 hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 ring-1 ring-brand-200 dark:ring-brand-500/25">
-          <span className="size-1.5 rounded-full bg-brand-500 animate-pulse" />
-          {t("waiting.badgeLabel")}
-        </div>
-      </div>
+      {/* ── HERO — pending review + illustration + identity ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-brand-700/20 bg-gradient-to-br from-brand-600 via-brand-500 to-brand-700 shadow-lg shadow-brand-900/10">
+        {/* decorative layers */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-[length:22px_22px]" />
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full bg-white/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-12 size-64 rounded-full bg-brand-800/30 blur-3xl" />
 
-      {/* ── Hero card ── */}
-      <div className="rounded-2xl border border-border-secondary bg-bg-secondary shadow-sm overflow-hidden">
-        <div className="relative bg-gradient-to-br from-brand-600 via-brand-500 to-brand-700 px-5 sm:px-6 py-6 sm:py-8">
-          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_30%_20%,white_1px,transparent_1px),radial-gradient(circle_at_70%_80%,white_1px,transparent_1px)] bg-[length:24px_24px]" />
+        <div className="relative p-6 sm:p-8 lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
+          {/* Left column */}
+          <div className="flex flex-col gap-5 lg:order-first">
+            {/* Row: text + compact illustration (mobile/tablet) */}
+            <div className="flex items-center gap-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
+                    <span className="size-1.5 rounded-full bg-white animate-pulse" />
+                    {t("waiting.badgeLabel")}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/90 ring-1 ring-white/20">
+                    <ClockIcon size={12} weight="fill" />
+                    {t("profile.statusWaited")}
+                  </span>
+                </div>
 
-          <div className="relative z-10 flex flex-col items-center sm:flex-row sm:items-center gap-4 sm:gap-5">
-            {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-white/20 ring-[3px] ring-warning-400/70">
-                {isPending ? (
-                  <div className="size-full skeleton-shimmer" />
-                ) : avatarSrc ? (
-                  <Image
-                    src={avatarSrc}
-                    alt={displayName}
-                    width={96}
-                    height={96}
-                    className="size-full object-cover"
-                    unoptimized={!!photoPreview}
-                  />
-                ) : (
-                  <div className="size-full flex items-center justify-center text-white font-bold text-3xl select-none">
-                    {initial}
-                  </div>
-                )}
+                <div>
+                  <h1 className="text-2xl font-bold leading-tight text-white sm:text-3xl">{t("waiting.title")}</h1>
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">{t("waiting.description")}</p>
+                </div>
               </div>
 
-              {/* Status badge */}
-              {!isPending && (
-                <div className="absolute -bottom-1 -right-1 size-7 rounded-lg bg-warning-500 border-[3px] border-brand-600 flex items-center justify-center shadow-sm">
-                  <ClockIcon size={13} weight="fill" className="text-white" />
-                </div>
-              )}
-
-              {/* Camera overlay in edit mode */}
-              {editing && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <CameraIcon size={22} weight="fill" className="text-white" />
-                  </button>
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
-                </>
-              )}
+              {/* Compact illustration — ~30% on the right, mobile & tablet only */}
+              <div className="w-[30%] max-w-[128px] shrink-0 self-center lg:hidden">
+                <Image src="/svgs/confrimed.svg" alt="" width={200} height={200} priority className="w-full drop-shadow-lg" />
+              </div>
             </div>
 
-            {/* Name + info */}
-            <div className="text-center sm:text-left flex-1 min-w-0">
-              <div className="flex items-center justify-center sm:justify-start gap-2">
-                {isPending ? (
-                  <div className="h-6 w-48 rounded-lg bg-white/20 animate-pulse" />
-                ) : (
+            {/* Avatar + identity card */}
+            <div className="flex items-center gap-4 rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur-sm">
+              <div className="relative shrink-0">
+                <div className="size-16 overflow-hidden rounded-2xl bg-white/20 ring-2 ring-white/40">
+                  {isPending ? (
+                    <div className="size-full animate-pulse bg-white/25" />
+                  ) : avatarSrc ? (
+                    <Image
+                      src={avatarSrc}
+                      alt={displayName}
+                      width={96}
+                      height={96}
+                      className="size-full object-cover"
+                      unoptimized={!!photoPreview}
+                    />
+                  ) : (
+                    <div className="flex size-full select-none items-center justify-center text-2xl font-bold text-white">
+                      {initial}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pending status pip (view mode) */}
+                {!isPending && !editing && (
+                  <div className="absolute -bottom-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-warning-500 ring-2 ring-white/80 shadow-sm">
+                    <ClockIcon size={12} weight="fill" className="text-white" />
+                  </div>
+                )}
+
+                {/* Camera FAB in edit mode */}
+                {editing && (
                   <>
-                    <h1 className="text-lg sm:text-xl font-bold text-white leading-tight truncate">
-                      {displayName}
-                    </h1>
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      aria-label={t("setup.avatarHint")}
+                      className="absolute -bottom-1.5 -right-1.5 flex size-7 items-center justify-center rounded-full bg-white text-brand-600 shadow-md ring-2 ring-brand-500 transition-colors hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
+                    >
+                      <CameraIcon size={14} weight="fill" />
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
                   </>
                 )}
               </div>
 
-              {isPending ? (
-                <div className="space-y-1.5 mt-2">
-                  <div className="h-3.5 w-40 rounded bg-white/15 animate-pulse mx-auto sm:mx-0" />
-                  <div className="h-3.5 w-32 rounded bg-white/15 animate-pulse mx-auto sm:mx-0" />
-                </div>
-              ) : (
-                <div className="mt-1.5">
-                  <p className="text-sm text-white/70">{profile?.email || session?.user?.email}</p>
-                  {profile?.university_name && (
-                    <p className="mt-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-white/80">
-                      <BuildingsIcon size={14} className="text-white/60 shrink-0" />
-                      {profile.university_name}
-                    </p>
-                  )}
-                </div>
-              )}
+              <div className="min-w-0 flex-1">
+                {isPending ? (
+                  <div className="space-y-2">
+                    <div className="h-4 w-32 rounded bg-white/25 animate-pulse" />
+                    <div className="h-3 w-40 rounded bg-white/15 animate-pulse" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="truncate text-base font-bold text-white">{displayName}</p>
+                    {(profile?.email || session?.user?.email) && (
+                      <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-white/70">
+                        <EnvelopeSimpleIcon size={12} className="shrink-0" />
+                        <span className="truncate">{profile?.email || session?.user?.email}</span>
+                      </p>
+                    )}
+                    {profile?.university_name && (
+                      <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-white/80">
+                        <BuildingsIcon size={12} className="shrink-0" />
+                        <span className="truncate">{profile.university_name}</span>
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Illustration — desktop right column */}
+          <div className="hidden shrink-0 lg:order-last lg:block lg:w-60">
+            <Image src="/svgs/confrimed.svg" alt="" width={320} height={320} priority className="w-full drop-shadow-xl" />
           </div>
         </div>
       </div>
@@ -497,7 +510,7 @@ export default function WaitingRoomPage() {
               disabled={saving}
               className="inline-flex w-full sm:w-auto min-w-[200px] justify-center items-center gap-2 rounded-lg bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 text-white px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-50 order-1 sm:order-2"
             >
-              {saving ? t("common.loading") : t("common.save")}
+              {saving ? <Spinner className="size-5" /> : t("common.save")}
             </button>
           </div>
         </form>

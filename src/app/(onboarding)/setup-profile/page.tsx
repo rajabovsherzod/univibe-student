@@ -2,30 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { parseDate } from "@internationalized/date";
 import Image from "next/image";
-import { getLogoutUrl } from "@/lib/get-app-url";
+import { performLogout } from "@/lib/logout";
 import {
   CameraIcon, BuildingsIcon, SignOutIcon, LockIcon, ClockIcon,
+  UserIcon, GraduationCapIcon, EnvelopeSimpleIcon,
 } from "@phosphor-icons/react";
 import { useTranslation } from "@/lib/i18n/i18n";
 
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/base/input/input";
 import { Select } from "@/components/base/select/select";
 import { DatePicker } from "@/components/application/date-picker/date-picker";
 
 import {
-  useStudentMe,
   useFaculties,
   useDegreeLevels,
   useYearLevels,
   useUpdateProfile,
 } from "@/hooks/api/use-profile";
-import { toHttps } from "@/utils/cx";
+import { useUniversities } from "@/hooks/api/use-university";
+import { cx } from "@/utils/cx";
 
 type ProfileFormType = {
   name: string;
@@ -40,13 +42,48 @@ type ProfileFormType = {
 };
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  description,
+  icon: Icon,
+  step,
+  children,
+}: {
+  title: string;
+  description?: string;
+  icon?: React.ComponentType<{ size?: number; weight?: "regular" | "bold" | "fill"; className?: string }>;
+  step?: number;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-2xl border border-border-secondary bg-bg-secondary shadow-sm overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-border-secondary">
-        <p className="text-[11px] font-bold text-fg-tertiary uppercase tracking-widest">{title}</p>
+      <div className="flex items-center gap-3.5 px-5 py-4 border-b border-border-secondary bg-bg-secondary">
+        {Icon && (
+          <span className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/25">
+            <Icon size={19} weight="fill" />
+            {step != null && (
+              <span className="absolute -right-1.5 -top-1.5 flex size-4.5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white ring-2 ring-bg-secondary">
+                {step}
+              </span>
+            )}
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-fg-primary leading-tight">{title}</p>
+          {description && <p className="mt-0.5 text-xs text-fg-tertiary leading-relaxed">{description}</p>}
+        </div>
       </div>
-      <div className="px-5 py-4">{children}</div>
+      <div className="px-5 py-5">{children}</div>
+    </div>
+  );
+}
+
+// ── Per-field skeleton (label + control) ───────────────────────────────────────
+function FieldSkeleton({ full = false, label = true }: { full?: boolean; label?: boolean }) {
+  return (
+    <div className={cx("space-y-1.5", full && "sm:col-span-2")}>
+      {label && <div className="h-3.5 w-24 rounded skeleton-shimmer" />}
+      <div className="h-11 rounded-lg skeleton-shimmer" />
     </div>
   );
 }
@@ -55,30 +92,27 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function SetupProfilePage() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { data: session, status: authStatus, update: updateSession } = useSession();
-  const { data: me, isLoading: isLoadingMe } = useStudentMe();
+  // The setup page runs BEFORE a student profile exists, so we must NOT call
+  // /student/me/ (it 403/404s). Everything the form needs to pre-fill — name,
+  // surname, email, university, status — is already carried in the auth session
+  // (populated from the login/OTP response). Source it from there.
+  const { data: session, status: sessionStatus, update: updateSession } = useSession();
   const updateProfile = useUpdateProfile();
+  const { data: universities } = useUniversities();
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Already approved/rejected → go home
-  useEffect(() => {
-    if (!me) return;
-    if (me.status === "approved" || me.status === "rejected") {
-      const sessionStatus = session?.user?.studentStatus;
-      if (sessionStatus !== me.status) {
-        updateSession({ studentStatus: me.status }).then(() => router.push("/"));
-      } else {
-        router.push("/");
-      }
-    }
-  }, [me]); // eslint-disable-line react-hooks/exhaustive-deps
+  const studentStatus = session?.user?.studentStatus;
+  const universityId = session?.user?.universityId || undefined;
 
-  const universityId =
-    me?.university_public_id ||
-    (me?.university_id ? String(me.university_id) : undefined);
+  // Already approved/rejected → the setup page isn't for them; go home.
+  useEffect(() => {
+    if (studentStatus === "approved" || studentStatus === "rejected") {
+      router.push("/");
+    }
+  }, [studentStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: faculties,    isLoading: isLoadingFaculties } = useFaculties(universityId);
   const { data: degreeLevels, isLoading: isLoadingDegrees   } = useDegreeLevels(universityId);
@@ -106,17 +140,16 @@ export default function SetupProfilePage() {
     },
   });
 
-  // Pre-fill name/surname from profile or session
+  // Pre-fill name/surname from the full name the student entered at signup
+  // (carried in the session).
   useEffect(() => {
+    const fullName = (session?.user?.name || "").replace(/\bUser\b/gi, "").trim();
+    if (!fullName) return;
     const v = getValues();
-    if (me?.name    && !v.name)    setValue("name",    me.name);
-    if (me?.surname && !v.surname) setValue("surname", me.surname);
-    if (!me) {
-      const parts = (session?.user?.name || "").trim().split(/\s+/);
-      if (!v.name    && parts[0]) setValue("name",    parts[0]);
-      if (!v.surname && parts[1]) setValue("surname", parts.slice(1).join(" "));
-    }
-  }, [me, session?.user?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+    const parts = fullName.split(/\s+/);
+    if (!v.name && parts[0]) setValue("name", parts[0]);
+    if (!v.surname && parts.length > 1) setValue("surname", parts.slice(1).join(" "));
+  }, [session?.user?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -162,149 +195,147 @@ export default function SetupProfilePage() {
     try { localStorage.removeItem("user-storage"); } catch { }
     try { localStorage.removeItem("user-profile-storage"); } catch { }
     try { sessionStorage.clear(); } catch { }
-    signOut({ callbackUrl: getLogoutUrl() });
+    performLogout();
   };
 
   const isSubmitting = updateProfile.isPending;
 
-  // Display values for the hero card
-  const displayName = me?.name || me?.surname
-    ? `${me?.name || ""} ${me?.surname || ""}`.trim()
-    : (session?.user?.name || "").replace(/\bUser\b/gi, "").trim() || "Talaba";
-  const displayEmail = me?.email || session?.user?.email;
-  const universityName = me?.university_name;
-  const avatarSrc = photoPreview || toHttps(me?.profile_photo_url);
+  // Display values for the hero card — all from the session.
+  const displayName = (session?.user?.name || "").replace(/\bUser\b/gi, "").trim() || "Talaba";
+  const displayEmail = session?.user?.email;
+  const universityName = (universities || []).find((u) => u.public_id === universityId)?.name;
+  const avatarSrc = photoPreview;
   const initial = displayName.charAt(0).toUpperCase();
 
   const facultyItems    = (faculties    || []).map(f => ({ id: f.public_id, label: f.name }));
   const degreeItems     = (degreeLevels || []).map(d => ({ id: d.public_id, label: d.name }));
   const yearItems       = (yearLevels   || []).map(y => ({ id: y.public_id, label: y.name }));
 
-  // ── Skeleton ────────────────────────────────────────────────────────────────
-  if (authStatus === "loading" || isLoadingMe) {
-    return (
-      <div className="space-y-4 pb-10 animate-pulse">
-        <div className="h-12 rounded-2xl bg-bg-secondary border border-border-secondary" />
-        <div className="rounded-2xl border border-border-secondary overflow-hidden">
-          <div className="h-36 bg-brand-600/30" />
-        </div>
-        <div className="rounded-2xl border border-border-secondary bg-bg-secondary p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-11 rounded-lg skeleton-shimmer" />
-            ))}
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border-secondary bg-bg-secondary p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-11 rounded-lg skeleton-shimmer" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Per-field loading flags — the form layout stays mounted & stable; only the
+  // pieces that receive data (name/surname from the session) show a brief
+  // skeleton while the session itself is still resolving.
+  const sessionLoading = sessionStatus === "loading";
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-10">
 
-      {/* ── Status banner ── */}
-      <div className="flex items-center gap-3.5 rounded-2xl border border-border-secondary bg-bg-secondary shadow-xs px-4 py-3.5">
-        <div className="size-9 rounded-xl bg-brand-50 dark:bg-brand-500/10 ring-1 ring-brand-200/60 dark:ring-brand-500/25 flex items-center justify-center shrink-0">
-          <ClockIcon size={17} weight="fill" className="text-brand-600 dark:text-brand-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-fg-primary">{t("setup.bannerTitle")}</p>
-          <p className="text-xs text-fg-tertiary leading-relaxed mt-0.5">
-            {t("setup.bannerDesc")}
-          </p>
-        </div>
-        <div className="shrink-0 hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold bg-brand-500 dark:bg-brand-500 text-white dark:text-warning-300 ring-1 ring-warning-200 dark:ring-warning-500/25">
-          <span className="size-1.5 rounded-full bg-white animate-pulse" />
-          {t("setup.bannerBadge")}
-        </div>
-      </div>
+      {/* ── HERO — illustration + welcome + avatar ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-brand-700/20 bg-gradient-to-br from-brand-600 via-brand-500 to-brand-700 shadow-lg shadow-brand-900/10">
+        {/* decorative layers */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-[length:22px_22px]" />
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full bg-white/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-12 size-64 rounded-full bg-brand-800/30 blur-3xl" />
 
-      {/* ── Hero card ── */}
-      <div className="rounded-2xl border border-border-secondary bg-bg-secondary shadow-sm overflow-hidden">
-        <div className="relative bg-gradient-to-br from-brand-600 via-brand-500 to-brand-700 px-5 sm:px-6 py-6 sm:py-8">
-          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_30%_20%,white_1px,transparent_1px),radial-gradient(circle_at_70%_80%,white_1px,transparent_1px)] bg-[length:24px_24px]" />
+        <div className="relative p-6 sm:p-8 lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
+          {/* Left column — heading (+ small illustration on mobile), avatar/identity */}
+          <div className="flex flex-col gap-5 lg:order-first">
+            {/* Row: text on the left, compact illustration on the right (mobile/tablet) */}
+            <div className="flex items-center gap-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
+                    <span className="size-1.5 rounded-full bg-white" />
+                    {t("setup.heroStep")}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/90 ring-1 ring-white/20">
+                    <ClockIcon size={12} weight="fill" />
+                    {t("setup.bannerBadge")}
+                  </span>
+                </div>
 
-          <div className="relative z-10 flex flex-col items-center sm:flex-row sm:items-center gap-4 sm:gap-5">
-            {/* Clickable avatar */}
-            <div className="relative shrink-0">
-              <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-white/20 ring-[3px] ring-white/30">
-                {avatarSrc ? (
-                  <Image
-                    src={avatarSrc}
-                    alt={displayName}
-                    width={96}
-                    height={96}
-                    className="size-full object-cover"
-                    unoptimized={!!photoPreview}
-                  />
-                ) : (
-                  <div className="size-full flex items-center justify-center text-white font-bold text-3xl select-none">
-                    {initial}
-                  </div>
-                )}
+                <div>
+                  <h1 className="text-2xl font-bold leading-tight text-white sm:text-3xl">{t("setup.bannerTitle")}</h1>
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">{t("setup.bannerDesc")}</p>
+                </div>
               </div>
-              {/* Camera overlay */}
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-              >
-                <CameraIcon size={22} weight="fill" className="text-white" />
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
+
+              {/* Compact illustration — ~30% on the right, mobile & tablet only */}
+              <div className="w-[30%] max-w-[128px] shrink-0 self-center lg:hidden">
+                <Image src="/svgs/setup-profile.svg" alt="" width={200} height={200} priority className="w-full drop-shadow-lg" />
+              </div>
             </div>
 
-            {/* Name + info */}
-            <div className="text-center sm:text-left flex-1 min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-white leading-tight truncate">
-                {displayName}
-              </h1>
-              <div className="mt-1.5 space-y-0.5">
+            {/* Avatar + identity card */}
+            <div className="flex items-center gap-4 rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur-sm">
+              <div className="relative shrink-0">
+                <div className="size-16 overflow-hidden rounded-2xl bg-white/20 ring-2 ring-white/40">
+                  {sessionLoading ? (
+                    <div className="size-full animate-pulse bg-white/25" />
+                  ) : avatarSrc ? (
+                    <Image
+                      src={avatarSrc}
+                      alt={displayName}
+                      width={96}
+                      height={96}
+                      className="size-full object-cover"
+                      unoptimized={!!photoPreview}
+                    />
+                  ) : (
+                    <div className="flex size-full select-none items-center justify-center text-2xl font-bold text-white">
+                      {initial}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  aria-label={t("setup.avatarHint")}
+                  className="absolute -bottom-1.5 -right-1.5 flex size-7 items-center justify-center rounded-full bg-white text-brand-600 shadow-md ring-2 ring-brand-500 transition-colors hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
+                >
+                  <CameraIcon size={14} weight="fill" />
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-bold text-white">{displayName}</p>
                 {displayEmail && (
-                  <p className="text-sm text-white/70">{displayEmail}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-white/70">
+                    <EnvelopeSimpleIcon size={12} className="shrink-0" />
+                    <span className="truncate">{displayEmail}</span>
+                  </p>
                 )}
                 {universityName && (
-                  <p className="flex items-center justify-center sm:justify-start gap-1.5 text-sm text-white/80">
-                    <BuildingsIcon size={14} className="text-white/60 shrink-0" />
-                    {universityName}
+                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-white/80">
+                    <BuildingsIcon size={12} className="shrink-0" />
+                    <span className="truncate">{universityName}</span>
                   </p>
                 )}
               </div>
-              <p className="mt-2 text-xs text-white/50 italic">
-                {t("setup.avatarHint")}
-              </p>
             </div>
+          </div>
+
+          {/* Illustration — desktop right column */}
+          <div className="hidden shrink-0 lg:order-last lg:block lg:w-60">
+            <Image src="/svgs/setup-profile.svg" alt="" width={320} height={320} priority className="w-full drop-shadow-xl" />
           </div>
         </div>
       </div>
 
       {/* ── Shaxsiy ma'lumotlar ── */}
-      <Section title={t("profile.personalInfoSection")}>
+      <Section title={t("profile.personalInfoSection")} description={t("setup.heroPersonalDesc")} icon={UserIcon} step={1}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-          <Controller name="name" control={control}
-            render={({ field }) => (
-              <Input {...field} label={`${t("auth.name")} *`} placeholder="Alisher"
-                isInvalid={!!formState.errors.name}
-                hint={formState.errors.name?.message}
-                isDisabled={isSubmitting} />
-            )}
-          />
-          <Controller name="surname" control={control}
-            render={({ field }) => (
-              <Input {...field} label={`${t("auth.surname")} *`} placeholder="Toshmatov"
-                isInvalid={!!formState.errors.surname}
-                hint={formState.errors.surname?.message}
-                isDisabled={isSubmitting} />
-            )}
-          />
+          {sessionLoading ? <FieldSkeleton /> : (
+            <Controller name="name" control={control}
+              render={({ field }) => (
+                <Input {...field} label={`${t("auth.name")} *`} placeholder="Alisher"
+                  isInvalid={!!formState.errors.name}
+                  hint={formState.errors.name?.message}
+                  isDisabled={isSubmitting} />
+              )}
+            />
+          )}
+          {sessionLoading ? <FieldSkeleton /> : (
+            <Controller name="surname" control={control}
+              render={({ field }) => (
+                <Input {...field} label={`${t("auth.surname")} *`} placeholder="Toshmatov"
+                  isInvalid={!!formState.errors.surname}
+                  hint={formState.errors.surname?.message}
+                  isDisabled={isSubmitting} />
+              )}
+            />
+          )}
           <Controller name="middle_name" control={control}
             render={({ field }) => (
               <Input {...field} label={`${t("profile.middleName")} *`} placeholder="Baxtiyorovich"
@@ -328,6 +359,7 @@ export default function SetupProfilePage() {
                   {t("personalInfo.dob")} *
                 </label>
                 <DatePicker
+                  aria-label={t("personalInfo.dob")}
                   value={field.value ? parseDate(field.value) : null}
                   onChange={(v) => field.onChange(v ? v.toString() : "")}
                 />
@@ -341,7 +373,7 @@ export default function SetupProfilePage() {
       </Section>
 
       {/* ── Akademik ma'lumotlar ── */}
-      <Section title={t("profile.academicSection")}>
+      <Section title={t("profile.academicSection")} description={t("setup.heroAcademicDesc")} icon={GraduationCapIcon} step={2}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
           {/* Student ID with lock note */}
           <div className="sm:col-span-2 space-y-1.5">
@@ -359,67 +391,73 @@ export default function SetupProfilePage() {
             </div>
           </div>
 
-          <div className="sm:col-span-2">
-            <Controller name="faculty_id" control={control}
+          {isLoadingFaculties ? <FieldSkeleton full /> : (
+            <div className="sm:col-span-2">
+              <Controller name="faculty_id" control={control}
+                render={({ field }) => (
+                  <Select
+                    label={`${t("personalInfo.faculty")} *`}
+                    placeholder={t("personalInfo.facultyPlaceholder")}
+                    items={facultyItems}
+                    selectedKey={field.value || null}
+                    onSelectionChange={(key) => field.onChange(String(key))}
+                    isDisabled={isSubmitting}
+                    isInvalid={!!formState.errors.faculty_id}
+                    hint={formState.errors.faculty_id?.message}
+                  >
+                    {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+                  </Select>
+                )}
+              />
+            </div>
+          )}
+
+          {isLoadingDegrees ? <FieldSkeleton /> : (
+            <Controller name="degree_level_id" control={control}
               render={({ field }) => (
                 <Select
-                  label={`${t("personalInfo.faculty")} *`}
-                  placeholder={t("personalInfo.facultyPlaceholder")}
-                  items={facultyItems}
+                  label={`${t("personalInfo.degree")} *`}
+                  placeholder={t("personalInfo.degreePlaceholder")}
+                  items={degreeItems}
                   selectedKey={field.value || null}
                   onSelectionChange={(key) => field.onChange(String(key))}
-                  isDisabled={isLoadingFaculties || isSubmitting}
-                  isInvalid={!!formState.errors.faculty_id}
-                  hint={formState.errors.faculty_id?.message}
+                  isDisabled={isSubmitting}
+                  isInvalid={!!formState.errors.degree_level_id}
+                  hint={formState.errors.degree_level_id?.message}
                 >
                   {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
                 </Select>
               )}
             />
-          </div>
+          )}
 
-          <Controller name="degree_level_id" control={control}
-            render={({ field }) => (
-              <Select
-                label={`${t("personalInfo.degree")} *`}
-                placeholder={t("personalInfo.degreePlaceholder")}
-                items={degreeItems}
-                selectedKey={field.value || null}
-                onSelectionChange={(key) => field.onChange(String(key))}
-                isDisabled={isLoadingDegrees || isSubmitting}
-                isInvalid={!!formState.errors.degree_level_id}
-                hint={formState.errors.degree_level_id?.message}
-              >
-                {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
-              </Select>
-            )}
-          />
-
-          <Controller name="year_level_id" control={control}
-            render={({ field }) => (
-              <Select
-                label={`${t("personalInfo.year")} *`}
-                placeholder={t("personalInfo.yearPlaceholder")}
-                items={yearItems}
-                selectedKey={field.value || null}
-                onSelectionChange={(key) => field.onChange(String(key))}
-                isDisabled={isLoadingYears || isSubmitting}
-                isInvalid={!!formState.errors.year_level_id}
-                hint={formState.errors.year_level_id?.message}
-              >
-                {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
-              </Select>
-            )}
-          />
+          {isLoadingYears ? <FieldSkeleton /> : (
+            <Controller name="year_level_id" control={control}
+              render={({ field }) => (
+                <Select
+                  label={`${t("personalInfo.year")} *`}
+                  placeholder={t("personalInfo.yearPlaceholder")}
+                  items={yearItems}
+                  selectedKey={field.value || null}
+                  onSelectionChange={(key) => field.onChange(String(key))}
+                  isDisabled={isSubmitting}
+                  isInvalid={!!formState.errors.year_level_id}
+                  hint={formState.errors.year_level_id?.message}
+                >
+                  {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+                </Select>
+              )}
+            />
+          )}
         </div>
       </Section>
 
       {/* ── Submit + Sign out ── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+      <div className="flex flex-col-reverse gap-3 rounded-2xl border border-border-secondary bg-bg-secondary p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
           onClick={handleSignOut}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-500 text-white px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:ring-offset-2 w-full sm:w-auto"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-error-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:ring-offset-2 sm:w-auto cursor-pointer"
         >
           <SignOutIcon size={16} weight="bold" />
           {t("profile.logoutButton")}
@@ -428,9 +466,13 @@ export default function SetupProfilePage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex w-full sm:w-auto min-w-[220px] justify-center items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 text-white px-6 py-2.5 text-sm font-semibold transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-50"
+          className="inline-flex w-full min-w-[220px] items-center justify-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-600 dark:hover:bg-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 sm:w-auto cursor-pointer"
         >
-          {isSubmitting ? t("common.loading") : t("personalInfo.saveButton")}
+          {isSubmitting ? (
+            <Spinner className="size-5 text-white" />
+          ) : (
+            t("personalInfo.saveButton")
+          )}
         </button>
       </div>
     </form>

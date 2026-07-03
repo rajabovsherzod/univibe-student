@@ -21,16 +21,19 @@ const ACCESS_TOKEN_LIFETIME_MS = 14 * 60 * 1000; // 14 min (backend gives 15 min
 const SECRET = process.env.NEXTAUTH_SECRET!;
 
 // NextAuth uses __Secure- prefix when served over HTTPS
+// IMPORTANT: must match the app-scoped cookie name in [...nextauth]/route.ts
+// (`univibe-student.session-token`) so the refresh writes the cookie the session
+// actually reads — and never collides with the admin app's cookie.
 const USE_SECURE_COOKIES = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
 const COOKIE_NAME = USE_SECURE_COOKIES
-  ? "__Secure-next-auth.session-token"
-  : "next-auth.session-token";
+  ? "__Secure-univibe-student.session-token"
+  : "univibe-student.session-token";
 
 export async function POST(req: NextRequest) {
   console.log("[refresh/route.ts] POST /api/auth/refresh triggered");
   try {
     // 1. Read current JWT from cookie
-    const token = await getToken({ req, secret: SECRET });
+    const token = await getToken({ req, secret: SECRET, cookieName: COOKIE_NAME, secureCookie: USE_SECURE_COOKIES });
     if (!token?.refreshToken) {
       console.warn("[refresh/route.ts] No refreshToken found in the session cookie!");
       return NextResponse.json({ error: "no_session" }, { status: 401 });

@@ -41,6 +41,16 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://test.univibe.uz";
 // proactively refreshes before the actual expiry.
 const ACCESS_TOKEN_LIFETIME_MS = 14 * 60 * 1000; // 14 minutes
 
+// ── App-scoped cookies ──────────────────────────────────────────────────────
+// The admin and student apps run on the same host in dev (localhost:3000 vs
+// :3002). Cookies are scoped by DOMAIN, not port — so with NextAuth's default
+// cookie name (`next-auth.session-token`) the two apps SHARE one session cookie
+// and clobber / read each other's tokens (an admin token then hits student APIs
+// and gets 403). Giving each app a distinct cookie name fully isolates them.
+const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL || "").startsWith("https://");
+const COOKIE_PREFIX = "univibe-student";
+const securePrefix = USE_SECURE_COOKIES ? "__Secure-" : "";
+
 async function refreshAccessToken(
   refreshToken: string
 ): Promise<{ accessToken: string; refreshToken?: string; expiresAt: number } | null> {
@@ -220,6 +230,22 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 10 * 24 * 60 * 60, // 10 days — matches refresh token lifetime
+  },
+
+  useSecureCookies: USE_SECURE_COOKIES,
+  cookies: {
+    sessionToken: {
+      name: `${securePrefix}${COOKIE_PREFIX}.session-token`,
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: USE_SECURE_COOKIES },
+    },
+    callbackUrl: {
+      name: `${securePrefix}${COOKIE_PREFIX}.callback-url`,
+      options: { sameSite: "lax", path: "/", secure: USE_SECURE_COOKIES },
+    },
+    csrfToken: {
+      name: `${USE_SECURE_COOKIES ? "__Host-" : ""}${COOKIE_PREFIX}.csrf-token`,
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: USE_SECURE_COOKIES },
+    },
   },
 
   pages: {

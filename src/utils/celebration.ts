@@ -1,5 +1,5 @@
-import confetti from 'canvas-confetti';
-
+// canvas-confetti is loaded on demand (first celebration) so it stays out of the
+// initial bundle — it only matters after a successful redeem / attendance.
 export function playCelebration() {
   // 1. Play "Success Chime" using Web Audio API
   try {
@@ -34,30 +34,16 @@ export function playCelebration() {
   } catch (e) {
   }
 
-  // 2. Fire Candy Confetti Cannon
-  const duration = 2500;
-  const end = Date.now() + duration;
+  // 2. Fire Candy Confetti Cannon (lib loaded lazily)
+  void import('canvas-confetti').then(({ default: confetti }) => {
+    const duration = 2500;
+    const end = Date.now() + duration;
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-  (function frame() {
-    confetti({
-      particleCount: 4,
-      angle: 60,
-      spread: 55,
-      origin: { x: 0 },
-      colors: colors
-    });
-    confetti({
-      particleCount: 4,
-      angle: 120,
-      spread: 55,
-      origin: { x: 1 },
-      colors: colors
-    });
-
-    if (Date.now() < end) {
-      requestAnimationFrame(frame);
-    }
-  }());
+    (function frame() {
+      confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 }, colors });
+      confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 }, colors });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    })();
+  }).catch(() => {});
 }
