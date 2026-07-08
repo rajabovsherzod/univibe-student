@@ -38,6 +38,8 @@ export const API_CONFIG = {
     coins: {
       balance: "/api/v1/coins/student/balance/",
       transactions: "/api/v1/coins/student/transactions/",
+      qrClaim: "/api/v1/coins/student/qr-claim/",
+      qrRequests: "/api/v1/coins/student/qr-requests/",
     },
     market: {
       products: "/api/v1/market/products/",

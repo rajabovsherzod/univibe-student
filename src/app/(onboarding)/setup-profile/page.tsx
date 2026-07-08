@@ -178,11 +178,21 @@ export default function SetupProfilePage() {
     } catch (error: unknown) {
       const err = error as { response?: { data?: Record<string, unknown> | string } };
       const errData = err?.response?.data;
+      // Flatten DRF field errors ({"error": {"university_student_id": ["msg"]}})
+      // into a readable sentence instead of dumping JSON.
+      const flatten = (v: unknown): string | undefined => {
+        if (!v) return undefined;
+        if (typeof v === "string") return v;
+        if (Array.isArray(v)) return v.map(flatten).filter(Boolean).join(" ");
+        if (typeof v === "object") return Object.values(v as Record<string, unknown>).map(flatten).filter(Boolean).join(" ");
+        return undefined;
+      };
       const msg =
         (errData && typeof errData === "object" && (
           ("detail"  in errData ? errData.detail  : undefined) ||
-          ("message" in errData ? errData.message : undefined)
-        )) || errData || t("setup.saveError");
+          ("message" in errData ? errData.message : undefined) ||
+          ("error" in errData ? flatten((errData as Record<string, unknown>).error) : undefined)
+        )) || flatten(errData) || t("setup.saveError");
       const { toast } = await import("sonner");
       toast.error(t("common.error"), {
         description: typeof msg === "string" ? msg : JSON.stringify(msg, null, 2),

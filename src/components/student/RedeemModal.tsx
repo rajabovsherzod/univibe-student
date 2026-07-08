@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { X, StorefrontIcon, CoinVerticalIcon, ArrowRight } from '@phosphor-icons/react';
+import { X, StorefrontIcon, WarningIcon, ArrowRight } from '@phosphor-icons/react';
 import { CoinPill } from '@/components/student/CoinPill';
 import { useTranslation } from '@/lib/i18n/i18n';
 import type { ShopProduct } from '@/hooks/api/use-shop';
@@ -44,36 +44,43 @@ export function RedeemModal({ product, userBalance, isLoading, onConfirm, onClos
           <X size={18} weight="bold" />
         </button>
 
-        {/* Product image */}
-        <div className="relative aspect-[16/10] bg-bg-tertiary overflow-hidden">
+        {/* Product image — its own blurred backdrop fills the sides, full product on top */}
+        <div className="relative aspect-[16/10] overflow-hidden bg-bg-tertiary">
           {product.image ? (
-            <Image
-              src={toHttps(product.image)!}
-              alt={product.name}
-              fill
-              className="object-cover"
-              unoptimized
-            />
+            <>
+              <Image
+                src={toHttps(product.image)!}
+                alt=""
+                aria-hidden
+                fill
+                className="scale-125 object-cover opacity-70 blur-2xl"
+                unoptimized
+              />
+              <Image
+                src={toHttps(product.image)!}
+                alt={product.name}
+                fill
+                className="relative object-contain p-2"
+                unoptimized
+              />
+            </>
           ) : (
             <div className="size-full flex items-center justify-center">
               <StorefrontIcon size={56} className="text-fg-quaternary" />
             </div>
           )}
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-          {/* Product name on image */}
-          <div className="absolute bottom-4 left-5 right-5">
-            <h3 className="text-lg font-bold text-white leading-snug drop-shadow-sm">
-              {product.name}
-            </h3>
-            {product.description && (
-              <p className="text-xs text-white/70 mt-1 line-clamp-2">{product.description}</p>
-            )}
-          </div>
         </div>
 
         {/* Body */}
         <div className="p-5 space-y-4">
+          {/* Name + description */}
+          <div>
+            <h3 className="text-lg font-bold text-fg-primary leading-snug">{product.name}</h3>
+            {product.description && (
+              <p className="mt-1 text-sm text-fg-tertiary line-clamp-2">{product.description}</p>
+            )}
+          </div>
+
           {/* Price row */}
           <div className="flex items-center justify-between p-3.5 rounded-xl bg-bg-tertiary">
             <span className="text-sm font-medium text-fg-secondary">{t('shop.redeemPrice')}</span>
@@ -99,12 +106,13 @@ export function RedeemModal({ product, userBalance, isLoading, onConfirm, onClos
             </div>
           </div>
 
-          {/* Insufficient balance warning */}
+          {/* Insufficient balance — simple solid-orange warning, no box/outline */}
           {!canAfford && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-error-50 dark:bg-error-600/10 border border-error-200 dark:border-error-600/20">
-              <CoinVerticalIcon size={16} className="text-error-500 shrink-0" />
-              <p className="text-xs font-medium text-error-600 dark:text-error-400">{t('shop.insufficientBalance')}</p>
-            </div>
+            <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-orange-500">
+              <WarningIcon size={16} weight="fill" className="shrink-0" />
+              {t('shop.insufficientBalance')}
+              <span className="font-medium text-orange-500/80">· yana {(product.price_coins - userBalance).toLocaleString()} coin</span>
+            </p>
           )}
 
           {/* Out of stock warning */}

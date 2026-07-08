@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
@@ -12,9 +12,15 @@ import {
   CaretRightIcon,
   SparkleIcon,
   WalletIcon,
+  QrCodeIcon,
+  HourglassMediumIcon,
+  XCircleIcon,
 } from '@phosphor-icons/react';
+import { toast } from 'sonner';
+import { QrScannerModal } from '@/components/student/QrScannerModal';
 import { useTranslation } from '@/lib/i18n/i18n';
-import { useBalance, useTransactions, type CoinTransaction } from '@/hooks/api/use-wallet';
+import { useBalance, useTransactions, useQrClaim, useQrRequests, type CoinTransaction, type StudentQrRequest } from '@/hooks/api/use-wallet';
+import { useQueryClient } from '@tanstack/react-query';
 import { CoinPill } from '@/components/student/CoinPill';
 import { CoinOutlineIcon } from '@/components/custom-icons/brand-icon';
 
@@ -114,8 +120,40 @@ function TransactionRow({ tx, t }: { tx: CoinTransaction, t: any }) {
 export default function BalancePage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
+  const [tab, setTab] = useState<'history' | 'pending'>('history');
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const queryClient = useQueryClient();
   const { data: balance, isPending: balanceLoading } = useBalance();
   const { data: txData, isPending: txLoading } = useTransactions({ page, page_size: PAGE_SIZE });
+  const { mutate: qrClaim, isPending: claiming } = useQrClaim();
+  const { data: qrRequests = [] } = useQrRequests({ refetchInterval: 5000 });
+
+  const pendingRequests = qrRequests.filter((r) => r.status === 'PENDING');
+  const recentDecided = qrRequests.filter((r) => r.status !== 'PENDING').slice(0, 5);
+
+  // when a pending request gets approved elsewhere, refresh balance + history
+  const prevPendingRef = useRef(0);
+  useEffect(() => {
+    if (prevPendingRef.current > pendingRequests.length) {
+      queryClient.invalidateQueries({ queryKey: ['student-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['student-transactions'] });
+    }
+    prevPendingRef.current = pendingRequests.length;
+  }, [pendingRequests.length, queryClient]);
+
+  const handleScanned = (token: string) => {
+    setScannerOpen(false);
+    qrClaim(token, {
+      onSuccess: (data) => {
+        toast.success(data.detail || "So'rov yuborildi", {
+          description: data.request ? `${data.request.rule_name} — xodim tasdiqlashini kuting` : undefined,
+        });
+        setTab('pending');
+      },
+      onError: (e: any) =>
+        toast.error(e?.response?.data?.error || "QR kod noto'g'ri yoki muddati tugagan"),
+    });
+  };
 
   const transactions = txData?.results ?? [];
   const totalCount = txData?.count ?? 0;
@@ -178,29 +216,79 @@ export default function BalancePage() {
               {t('balance.motivational')}
             </p>
           </div>
+
+          {/* QR claim — scan a staff member's rule QR to receive coins */}
+          <button
+            onClick={() => setScannerOpen(true)}
+            disabled={claiming}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60 sm:w-auto"
+          >
+            <QrCodeIcon size={18} weight="fill" />
+            Ball olish — QR skanerlash
+          </button>
         </div>
       </div>
 
       {/* ── Transaction History ── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-[15px] font-bold text-fg-primary">{t('balance.transactionHistory')}</h2>
-          {totalCount > 0 && !txLoading && (
+          <div className="flex items-center gap-1 rounded-lg bg-bg-secondary border border-border-secondary p-1">
+            <button
+              onClick={() => setTab('history')}
+              className={`rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors ${tab === 'history' ? 'bg-brand-600 text-white shadow-sm' : 'text-fg-tertiary hover:text-fg-secondary'}`}
+            >
+              {t('balance.transactionHistory')}
+            </button>
+            <button
+              onClick={() => setTab('pending')}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors ${tab === 'pending' ? 'bg-brand-600 text-white shadow-sm' : 'text-fg-tertiary hover:text-fg-secondary'}`}
+            >
+              Kutilmoqda
+              {pendingRequests.length > 0 && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tab === 'pending' ? 'bg-white/20 text-white' : 'bg-warning-500 text-white'}`}>
+                  {pendingRequests.length}
+                </span>
+              )}
+            </button>
+          </div>
+          {tab === 'history' && totalCount > 0 && !txLoading && (
             <span className="text-xs text-white bg-brand-500 px-2.5 py-1 rounded-full font-medium">
               {totalCount} {t('balance.totalCount')}
             </span>
           )}
         </div>
 
+        {/* Pending QR claims awaiting staff approval */}
+        {tab === 'pending' && (
+          <div className="space-y-3">
+            {pendingRequests.length === 0 && recentDecided.length === 0 ? (
+              <div className="rounded-2xl bg-bg-secondary border border-border-secondary py-14 text-center shadow-sm">
+                <HourglassMediumIcon size={36} className="mx-auto mb-3 text-fg-quaternary" />
+                <p className="text-sm font-semibold text-fg-secondary">Kutilayotgan so'rovlar yo'q</p>
+                <p className="text-xs text-fg-tertiary mt-1">Xodim ko'rsatgan QR ni skanerlab ball so'rang</p>
+              </div>
+            ) : (
+              <div className="bg-bg-secondary rounded-2xl border border-border-secondary shadow-sm overflow-hidden">
+                {pendingRequests.map((r) => (
+                  <QrRequestRow key={r.public_id} r={r} />
+                ))}
+                {recentDecided.map((r) => (
+                  <QrRequestRow key={r.public_id} r={r} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Loading */}
-        {(!txData || txLoading) && (
+        {tab === 'history' && (!txData || txLoading) && (
           <div className="bg-bg-secondary rounded-2xl border border-border-secondary shadow-sm overflow-hidden">
             {Array.from({ length: 6 }).map((_, i) => <TxSkeleton key={i} />)}
           </div>
         )}
 
         {/* Empty */}
-        {txData && !txLoading && grouped.length === 0 && (
+        {tab === 'history' && txData && !txLoading && grouped.length === 0 && (
           <div className="rounded-2xl bg-bg-secondary border border-border-secondary py-16 text-center shadow-sm">
             <div className="flex items-center justify-center size-14 rounded-2xl bg-bg-tertiary mx-auto mb-3">
               <CoinOutlineIcon size={28} color="currentColor" strokeWidth={18} className="text-fg-quaternary" />
@@ -211,7 +299,7 @@ export default function BalancePage() {
         )}
 
         {/* Grouped list */}
-        {txData && !txLoading && grouped.length > 0 && (
+        {tab === 'history' && txData && !txLoading && grouped.length > 0 && (
           <>
             {grouped.map(([date, txns]) => (
               <div key={date}>
@@ -250,6 +338,48 @@ export default function BalancePage() {
             )}
           </>
         )}
+      </div>
+
+      <QrScannerModal isOpen={scannerOpen} onScan={handleScanned} onClose={() => setScannerOpen(false)} />
+    </div>
+  );
+}
+
+// ── QR request row (pending / recently decided) ──────────────────────────────
+
+function QrRequestRow({ r }: { r: StudentQrRequest }) {
+  const isPending = r.status === 'PENDING';
+  const isApproved = r.status === 'APPROVED';
+  const Icon = isPending ? HourglassMediumIcon : isApproved ? ArrowDownLeftIcon : XCircleIcon;
+  return (
+    <div className="flex items-center gap-3 sm:gap-4 px-4 py-3.5 border-b border-border-secondary last:border-0">
+      <div className="shrink-0 flex items-center justify-center size-10 rounded-full bg-white dark:bg-bg-tertiary border border-border-secondary shadow-sm">
+        <Icon
+          size={18}
+          weight="bold"
+          className={isPending ? 'text-warning-500' : isApproved ? 'text-success-600 dark:text-success-400' : 'text-error-500'}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-fg-primary truncate">{r.rule_name}</p>
+        <p className="text-xs text-fg-tertiary mt-0.5 truncate">{r.staff_name} · {formatDateShort(r.created_at)}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        <div className={`flex items-center justify-end gap-1 text-sm font-bold tabular-nums ${r.coin_amount < 0 ? 'text-error-500' : 'text-fg-primary'}`}>
+          <span>{r.coin_amount > 0 ? '+' : ''}{r.coin_amount}</span>
+          <CoinOutlineIcon size={13} color="currentColor" strokeWidth={24} />
+        </div>
+        <span
+          className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+            isPending
+              ? 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400'
+              : isApproved
+                ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400'
+                : 'bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-400'
+          }`}
+        >
+          {isPending ? 'Kutilmoqda' : isApproved ? 'Tasdiqlandi' : 'Rad etildi'}
+        </span>
       </div>
     </div>
   );

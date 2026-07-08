@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { API_CONFIG } from "@/lib/api/config";
 import axiosInstance from "@/lib/axios";
@@ -77,5 +77,46 @@ export function useTransactions(params: TransactionParams = {}) {
     },
     enabled: status === "authenticated",
     staleTime: 1000 * 60 * 2,
+  });
+}
+
+// ── QR claim (scan a staff rule-QR to request coins) ─────────────────────────
+
+export interface StudentQrRequest {
+  public_id: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  created_at: string;
+  decided_at: string | null;
+  rule_name: string;
+  coin_amount: number;
+  staff_name: string;
+}
+
+export function useQrClaim() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (token: string) => {
+      const { data } = await axiosInstance.post(API_CONFIG.endpoints.coins.qrClaim, { token });
+      return data as { detail: string; request: StudentQrRequest };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student-qr-requests"] });
+    },
+  });
+}
+
+export function useQrRequests(params: { status?: string; refetchInterval?: number } = {}) {
+  const { status: authStatus } = useSession();
+  return useQuery<StudentQrRequest[]>({
+    queryKey: ["student-qr-requests", params.status ?? ""],
+    queryFn: async () => {
+      const qs = params.status ? `?status=${params.status}` : "";
+      const { data } = await axiosInstance.get<StudentQrRequest[]>(
+        `${API_CONFIG.endpoints.coins.qrRequests}${qs}`
+      );
+      return data;
+    },
+    enabled: authStatus === "authenticated",
+    refetchInterval: params.refetchInterval,
   });
 }

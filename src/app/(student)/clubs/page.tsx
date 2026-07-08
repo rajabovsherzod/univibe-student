@@ -46,7 +46,7 @@ const ClubCard = memo(function ClubCard({ club }: { club: Club }) {
       <div className="flex flex-1 flex-col p-3.5">
         <div className="flex items-start gap-3">
           {/* Logo */}
-          <div className="-mt-8 size-14 shrink-0 overflow-hidden rounded-2xl bg-bg-secondary ring-4 ring-bg-secondary shadow-sm">
+          <div className="relative z-10 -mt-8 size-14 shrink-0 overflow-hidden rounded-2xl bg-bg-secondary ring-4 ring-bg-secondary shadow-sm">
             {logo ? (
               <Image src={logo} alt={club.name} width={56} height={56} className="size-full object-cover" unoptimized />
             ) : (
